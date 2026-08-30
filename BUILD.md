@@ -1,0 +1,162 @@
+# FinTrack — building and running
+
+SwiftUI recreation of the `FinTrack.dc.html` prototype. iOS 17.0+, portrait, no third-party
+dependencies.
+
+## Open it
+
+```bash
+open FinTrack.xcodeproj
+```
+
+Then ⌘R. The scheme is `FinTrack`, bundle id `com.fintrack.app`. No signing team is configured,
+so it runs on the simulator as-is; to run on a device, set your team in Signing & Capabilities.
+
+## Build from the command line
+
+```bash
+./build.sh
+```
+
+Prints only errors and the final status. It serialises behind an atomic lock because several
+processes may share one derived-data path; a run can pause briefly while another finishes.
+
+## Project layout
+
+`FinTrack.xcodeproj` uses a **file-system-synchronized root group**, so every `.swift` file under
+`FinTrack/` is compiled automatically — adding a file needs no project edit. `Info.plist` is the one
+membership exception (otherwise it is also copied as a bundle resource and the build fails with a
+duplicate-output error).
+
+```
+FinTrack/
+  Core/       models, AppStore, persistence, formatting   — no SwiftUI
+  Design/     tokens, typography, motion, icons, components — no Core dependency
+  App/        UIState, RootView, TabBarView, alert, debug hooks
+  Features/   one folder per screen
+```
+
+`Core` and `Design` are independent of each other; every feature depends on both. Views read
+`@Environment(AppStore.self)`, `@Environment(UIState.self)` and `@Environment(\.theme)`.
+
+## The money coach
+
+The Coach tab talks to a **local Ollama** at `http://127.0.0.1:11434` — nothing leaves the machine
+and there is no API key. `NSAllowsLocalNetworking` is set so the simulator can reach the host.
+
+```bash
+ollama serve            # if it is not already running
+ollama pull qwen3.5:9b  # the default; see the preference list below
+```
+
+Model resolution: `qwen3.5:9b`, else `qwen2.5:7b`, `qwen3.5:4b`, `llama3.2:3b`, `llama3.2:1b`,
+`gemma3:1b`, else the first model `/api/tags` reports. The tab warms the model on appear and the
+request sends `keep_alive: 30m`, so only the first message of a session pays the load cost.
+
+The request also sends **`think: false`**, which matters a great deal. Qwen 3.5 is a reasoning
+model, and left to itself it spends nearly all of its output budget on hidden thinking. Measured on
+this machine with the coach's own prompt:
+
+| model | thinking | time | tokens |
+|---|---|---|---|
+| qwen3.5:9b | on | ~4 min | ~2000 |
+| qwen3.5:9b | **off** | **21 s** | 107 |
+| qwen3.5:4b | on | 130 s | 1982 |
+| qwen3.5:4b | **off** | **7 s** | 100 |
+
+Answer quality is unchanged — the coach wants a short plain-text verdict, not a derivation. Ollama
+accepts the flag for non-thinking models too (verified against `llama3.2:1b`), so it is sent
+unconditionally. `<think>` blocks are still stripped from replies as a fallback for models that
+ignore the flag.
+
+**With Ollama stopped the app still works** — the coach falls back to the prototype's deterministic
+preview answer, computed from real data.
+
+## Notifications
+
+Permission is requested only when the user changes a reminder time or finishes onboarding — never
+as a cold prompt at launch. Two repeating daily local notifications are registered
+(`fintrack.reminder.am` / `.pm`) and re-registered whenever the times or the coach name change.
+
+## Debug launch arguments (DEBUG builds only)
+
+Compiled out of Release. Useful for jumping straight to a screen:
+
+```bash
+xcrun simctl launch "iPhone 17 Pro" com.fintrack.app -FTTab loans -FTDark 1 -FTNoBanner 1
+```
+
+| Argument | Values |
+|---|---|
+| `-FTTab` | `home` `activity` `loans` `coach` |
+| `-FTDark` | `1` `0` |
+| `-FTMode` | `personal` `business` |
+| `-FTOverlay` | `entry` `settings` `wizard` `alert` `banner` `loan:<i>` `milestone:<i>` `account:<i>` |
+| `-FTFresh` | `1` — start from a blank ledger (**persists**; delete the saved file to undo) |
+| `-FTNoBanner` | `1` — suppress the timed launch banner |
+| `-FTAsk` | `"<text>"` — send one real message to the coach on launch |
+
+Saved state lives at `Library/Application Support/fintrack-v1.json` inside the app container
+(`xcrun simctl get_app_container "iPhone 17 Pro" com.fintrack.app data`).
+
+## Known deviations from the prototype
+
+- The date header and the budget month are derived from the current date rather than the
+  prototype's hard-coded "Saturday, Aug 30" / "August".
+- The prototype's `padding-top: 58px` is the mock device frame's status bar, not app padding; the
+  real safe area supplies it instead, so it is not reproduced literally.
+- Amount fields parse with the **device locale** (en_US "1,500" → 1500, de_DE "1.500" → 1500). The
+  prototype relied on `<input type="number">`, which simply rejects grouped input.
+- Export writes a JSON file and opens the share sheet; the prototype only flipped its label.
+- Apostrophes match the prototype's ASCII `'` rather than typographic `'`. Em dashes, middle dots
+  and the U+2212 minus sign in amounts are typographic, as in the source.
+
+## Tests
+
+The two drag gestures are the only behaviour a build cannot check and `xcrun simctl` cannot drive
+(it has no touch input), so they have their own XCUITest target, `FinTrackUITests`.
+
+```bash
+./test.sh
+```
+
+or from Xcode, ⌘U on the `FinTrack` scheme.
+
+`SwipeToDeleteTests` and `EntrySheetDragTests` assert the actual release rules from the prototype's
+pointer handlers, not merely that a swipe does something:
+
+| gesture | rule under test |
+|---|---|
+| row swipe | deletes past `dx < -80` |
+| row swipe | springs back at -50pt (past the flick distance, short of -80, too slow to flick) |
+| row swipe | ignores a 12pt drag |
+| row swipe | a fast flick deletes at only -45pt (`dx < -24 && velocity < -0.11 px/ms`) |
+| row swipe | a vertical pan scrolls and never deletes |
+| row swipe | the delete is persisted, verified by relaunching |
+| row swipe | emptying a day group removes its header |
+| sheet drag | dismisses past `dy > 140` |
+| sheet drag | springs back at 80pt |
+| sheet drag | a fast flick dismisses at only 60pt |
+| sheet drag | upward drag is resisted and never dismisses |
+| sheet drag | only the grabber carries the gesture — dragging the body does nothing |
+| sheet drag | tapping the scrim dismisses |
+
+The tests drive gestures with `press(forDuration:thenDragTo:)` rather than `swipeLeft()`, because
+the thresholds are the thing being tested and `swipeLeft()` gives no control over distance or
+velocity. Velocity is pinned explicitly — `XCUIGestureVelocity(50)` (0.05 px/ms, under the
+threshold) for the spring-back cases and `800` (0.8 px/ms, over it) for flicks — so each test
+exercises exactly one branch of the release rule.
+
+### What this suite caught
+
+Both gestures under-reported finger travel by roughly half. Each `DragGesture` was attached to a
+view that the gesture itself translates (the grabber lives inside the sheet that `dragOffset` moves;
+the row hosts its own gesture and is moved by `offset`), and SwiftUI's default `.local` coordinate
+space measures translation relative to that moving view. A 260pt drag registered as ~120pt, so the
+sheet's `dy > 140` branch could never fire and every distance threshold was effectively doubled for
+real users. Both gestures now use `coordinateSpace: .global`, which is what the prototype's
+`ev.clientY` (viewport coordinates) actually means.
+
+This was invisible to a green build and survived two code-review passes. It only appeared by driving
+the real gesture and reading the frames out of the failure recording. Each test launches a fresh app with `-FTNoBanner 1` so the launch banner never overlays
+the target, and the rows are addressed through `ft.row.<title>` accessibility identifiers.
