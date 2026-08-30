@@ -158,8 +158,16 @@ enum CoachPrompt {
                       amount: $0.amt,
                       direction: $0.dir == .inbound ? "they owe me" : "I owe them")
             },
-            milestones: data.msPersonal.map {
-                .init(name: $0.name, saved: $0.saved, target: $0.target, color: $0.colorHex)
+            milestones: data.msPersonal.map { m in
+                var out = Snapshot.Ms(name: m.name, saved: m.saved,
+                                      target: m.target, color: m.colorHex)
+                if let date = m.targetDate {
+                    out.targetDate = FinTrackFormatting.monthYear(date)
+                    if case .due(let perMonth, _) = m.pace() {
+                        out.requiredPerMonth = (perMonth * 100).rounded() / 100
+                    }
+                }
+                return out
             },
             monthSpendByBucket: .init(needs: data.bucketSpend.needs,
                                       wants: data.bucketSpend.wants,
@@ -246,7 +254,18 @@ enum CoachPrompt {
         struct Acct: Encodable { let name: String; let bal: Double }
         struct Inc: Encodable { let name: String; let amt: Double; let type: String }
         struct Ln: Encodable { let name: String; let amount: Double; let direction: String }
-        struct Ms: Encodable { let name: String; let saved: Double; let target: Double; let color: String }
+        /// `targetDate` and `requiredPerMonth` are omitted entirely for open-ended goals,
+        /// so the model is never handed a null to reason about. Without them the coach has
+        /// no time dimension for savings at all, which is why "how am I doing on my
+        /// milestones" used to get a vague answer.
+        struct Ms: Encodable {
+            let name: String
+            let saved: Double
+            let target: Double
+            let color: String
+            var targetDate: String?
+            var requiredPerMonth: Double?
+        }
 
         struct Buckets: Encodable {
             let needs: Double

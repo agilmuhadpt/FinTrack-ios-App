@@ -79,4 +79,24 @@ enum FinTrackFormatting {
         guard let v = Double(t), v.isFinite else { return nil }
         return v
     }
+
+    private static let shortMonthYear: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.setLocalizedDateFormatFromTemplate("LLL yyyy")
+        return f
+    }()
+
+    private static let longMonthYear: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.setLocalizedDateFormatFromTemplate("LLLL yyyy")
+        return f
+    }()
+
+    /// "Jun 2027" — the compact form used on the Home milestone card.
+    static func monthYear(_ date: Date) -> String { shortMonthYear.string(from: date) }
+
+    /// "June 2027" — the milestone detail screen has room for the full name.
+    static func longMonthYear(_ date: Date) -> String { longMonthYear.string(from: date) }
 }

@@ -78,6 +78,15 @@ struct MilestoneDetailView: View {
                     .padding(.top, 16)
 
                 // h2 — margin:22px 0 10px.
+                Text("Target date")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundStyle(theme.text)
+                    .padding(.top, 22)
+                    .padding(.bottom, 10)
+
+                targetDateCard(m)
+
+                // h2 — margin:22px 0 10px.
                 Text("Add money")
                     .font(.system(size: 18, weight: .bold))
                     .foregroundStyle(theme.text)
@@ -98,6 +107,103 @@ struct MilestoneDetailView: View {
             .padding(.bottom, 40)
         }
         .scrollDismissesKeyboard(.interactively)
+    }
+
+    // MARK: - Target date
+
+    /// Optional by design: a goal with no date behaves exactly as it always has, and
+    /// clearing the date returns it to that state.
+    private func targetDateCard(_ m: Milestone) -> some View {
+        let idx = index
+        let binding = Binding<Date>(
+            get: { m.targetDate ?? Self.defaultTargetDate() },
+            set: { store.setMilestoneDate(index: idx, date: $0) }
+        )
+
+        return FTCard {
+            VStack(alignment: .leading, spacing: 0) {
+                if m.targetDate == nil {
+                    Button {
+                        store.setMilestoneDate(index: idx, date: Self.defaultTargetDate())
+                    } label: {
+                        Text("Set a target date")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(FTColor.blue)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(FTPressableStyle(scale: 0.98))
+
+                    Text("Optional. With a date set, FinTrack shows what finishing on time costs per month.")
+                        .font(.system(size: 13))
+                        .foregroundStyle(theme.sub)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.top, 6)
+                } else {
+                    HStack(spacing: 12) {
+                        Text("Finish by")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(theme.text)
+                        Spacer(minLength: 0)
+                        DatePicker("", selection: binding, displayedComponents: .date)
+                            .labelsHidden()
+                    }
+
+                    Text(paceSentence(m))
+                        .font(.system(size: 13))
+                        .foregroundStyle(paceColor(m))
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.top, 8)
+
+                    Button {
+                        store.setMilestoneDate(index: idx, date: nil)
+                    } label: {
+                        Text("Remove date")
+                            .font(.system(size: 15, weight: .semibold))
+                            // Blue, not red: this destroys nothing. It returns the goal
+                            // to open-ended, which is the default state. Red here also
+                            // collided with the red overdue line directly above it.
+                            .foregroundStyle(FTColor.blue)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(FTPressableStyle(scale: 0.98))
+                    .padding(.top, 10)
+                }
+            }
+            .padding(20)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    /// A year out — far enough to be a real plan, near enough to mean something.
+    private static func defaultTargetDate(from now: Date = Date()) -> Date {
+        Calendar.current.date(byAdding: .year, value: 1, to: now) ?? now
+    }
+
+    /// Deliberately never says "on track". Judging that needs a contribution history,
+    /// and milestone deposits are logged without timestamps.
+    private func paceSentence(_ m: Milestone) -> String {
+        switch m.pace() {
+        case .noDate:
+            return ""
+        case .complete:
+            return "Goal reached \u{2014} nothing left to save."
+        case .overdue(let days):
+            let unit = days == 1 ? "day" : "days"
+            return "Overdue by \(days) \(unit). " + store.fmt(m.remaining) + " still to save."
+        case .due(let perMonth, let months):
+            let unit = months == 1 ? "month" : "months"
+            let by = m.targetDate.map { FinTrackFormatting.longMonthYear($0) } ?? ""
+            return store.fmt(perMonth) + " per month over \(months) \(unit) reaches "
+                 + store.fmt(m.target) + " by " + by + "."
+        }
+    }
+
+    private func paceColor(_ m: Milestone) -> Color {
+        if case .overdue = m.pace() { return FTColor.red }
+        if case .complete = m.pace() { return FTColor.green }
+        return theme.sub
     }
 
     // MARK: - Progress card

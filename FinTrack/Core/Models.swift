@@ -68,12 +68,31 @@ struct Loan: Identifiable, Codable, Hashable {
     fileprivate enum CodingKeys: String, CodingKey { case id, name, amt, dir, sub }
 }
 
+/// What a milestone's optional target date implies right now.
+///
+/// Deliberately has no "on track" case. Judging pace would need a contribution
+/// history, and `Transaction` carries no timestamp — only a day-group label — so any
+/// such verdict would be invented. These four cases are all that the data supports.
+enum MilestonePace: Equatable {
+    /// No target date set. The milestone behaves exactly as it did before.
+    case noDate
+    /// Already funded; a deadline no longer means anything.
+    case complete
+    /// The date has passed with money still owing.
+    case overdue(days: Int)
+    /// What it takes to finish on time, and how many calendar months are left.
+    case due(perMonth: Double, months: Int)
+}
+
 struct Milestone: Identifiable, Codable, Hashable {
     var id = UUID()
     var name: String
     var saved: Double
     var target: Double
     var colorHex: String
+    /// Optional. Goals like "Travel fund" are legitimately open-ended, so a date is never
+    /// required and nothing about the milestone changes until one is set.
+    var targetDate: Date?
 
     /// `m.target ? Math.min(100, Math.round(m.saved / m.target * 100)) : 0`
     var pct: Int {
@@ -85,7 +104,39 @@ struct Milestone: Identifiable, Codable, Hashable {
         return Int(max(0, min(100, raw)))
     }
 
-    fileprivate enum CodingKeys: String, CodingKey { case id, name, saved, target, colorHex }
+    /// Money still to find. Floors at zero so an over-funded goal never reads negative.
+    var remaining: Double { max(0, target - saved) }
+
+    var isComplete: Bool { target > 0 && saved >= target }
+
+    /// Calendar months until the target, rounded UP: a partial month is still a month in
+    /// which a contribution can be made, and rounding down would overstate the monthly
+    /// figure. Always at least 1 for a future date.
+    func monthsRemaining(from now: Date = Date(), calendar: Calendar = .current) -> Int? {
+        guard let targetDate else { return nil }
+        guard targetDate > now else { return 0 }
+        let parts = calendar.dateComponents([.month, .day], from: now, to: targetDate)
+        var months = parts.month ?? 0
+        if (parts.day ?? 0) > 0 { months += 1 }
+        return max(1, months)
+    }
+
+    /// The one number worth deriving from a target date: what finishing on time costs
+    /// per month. The savings mirror of the loan roadmap's required payment.
+    func pace(from now: Date = Date(), calendar: Calendar = .current) -> MilestonePace {
+        guard let targetDate else { return .noDate }
+        if isComplete { return .complete }
+        guard targetDate > now else {
+            let days = calendar.dateComponents([.day], from: targetDate, to: now).day ?? 0
+            return .overdue(days: max(0, days))
+        }
+        guard let months = monthsRemaining(from: now, calendar: calendar), months > 0 else {
+            return .overdue(days: 0)
+        }
+        return .due(perMonth: remaining / Double(months), months: months)
+    }
+
+    fileprivate enum CodingKeys: String, CodingKey { case id, name, saved, target, colorHex, targetDate }
     /// The prototype wrote this field as `color`; still accepted when reading.
     fileprivate enum LegacyCodingKeys: String, CodingKey { case color }
 }
@@ -359,7 +410,10 @@ extension Milestone {
                   name: decodeValue(c, .name, ""),
                   saved: decodeValue(c, .saved, 0),
                   target: decodeValue(c, .target, 0),
-                  colorHex: hex.isEmpty ? "#30D158" : hex)
+                  colorHex: hex.isEmpty ? "#30D158" : hex,
+                  // Absent in every ledger written before target dates existed, and
+                  // absent for any goal the user leaves open-ended. Both decode to nil.
+                  targetDate: try? c.decodeIfPresent(Date.self, forKey: .targetDate))
     }
 }
 

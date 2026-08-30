@@ -40,6 +40,9 @@ enum DebugLaunch {
     /// survives later launches. This is how a physical device gets pointed at the Mac
     /// without typing an IP into iOS Settings by hand.
     static var coachHost: String? { args["-FTCoachHost"] }
+    /// `-FTMilestoneDates 1` — give the seeded milestones target dates (+12, +4, and a
+    /// past one) so all three pace states can be screenshotted without tapping.
+    static var seedMilestoneDates: Bool { args["-FTMilestoneDates"] == "1" }
     static var startFresh: Bool { args["-FTFresh"] == "1" }
     /// `-FTDemo 1` — restore the seeded demo ledger before the UI appears. UI tests mutate
     /// persistent state (a swipe really does delete and really does write to disk), so
@@ -80,6 +83,20 @@ enum DebugLaunch {
         if let dark { store.dark = dark }
         if let mode { store.mode = mode }
         if let tab { ui.tab = tab }
+
+        if seedMilestoneDates {
+            let cal = Calendar.current
+            let offsets: [DateComponents] = [
+                DateComponents(month: 12),
+                DateComponents(month: 4),
+                DateComponents(day: -12),
+            ]
+            var data = store.data
+            for (i, off) in offsets.enumerated() where data.msPersonal.indices.contains(i) {
+                data.msPersonal[i].targetDate = cal.date(byAdding: off, to: Date())
+            }
+            store.replaceAll(data)
+        }
 
         if let ask, !ask.isEmpty {
             ui.tab = .coach

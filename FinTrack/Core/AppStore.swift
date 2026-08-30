@@ -333,6 +333,13 @@ final class AppStore {
 
     /// Port of the milestone-detail "Add money" handler: the milestone grows, the FIRST
     /// account is debited, the amount counts as Savings spend and a transaction is logged.
+    /// Sets or clears a milestone's optional target date. `nil` returns the goal to
+    /// open-ended, which is the default and a legitimate end state, not an error.
+    func setMilestoneDate(index: Int, date: Date?) {
+        guard data.msPersonal.indices.contains(index) else { return }
+        mutate { $0.msPersonal[index].targetDate = date }
+    }
+
     func addToMilestone(index: Int, amount: Double) {
         guard amount.isFinite, amount > 0, data.msPersonal.indices.contains(index) else { return }
         let name = data.msPersonal[index].name

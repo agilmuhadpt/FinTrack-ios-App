@@ -127,6 +127,7 @@ xcrun simctl launch "iPhone 17 Pro" com.fintrack.app -FTTab loans -FTDark 1 -FTN
 | `-FTDemo` | `1` — restore the seeded demo ledger before the UI appears |
 | `-FTAsk` | `"<text>"` — send one real message to the coach on launch |
 | `-FTCoachHost` | `"<addr>"` — set the Ollama address; **persisted** to `coach_host` |
+| `-FTMilestoneDates` | `1` — give the seeded milestones dates (+12mo, +4mo, 12 days overdue) |
 
 On a device, arguments go after a `--` separator:
 
@@ -137,6 +138,25 @@ xcrun devicectl device process launch --device <id> com.agilmuhad.fintrack \
 
 Saved state lives at `Library/Application Support/fintrack-v1.json` inside the app container
 (`xcrun simctl get_app_container "iPhone 17 Pro" com.fintrack.app data`).
+
+## Milestone target dates
+
+Milestones carry an **optional** `targetDate`. With one set, the app derives a single
+number — what finishing on time costs per month — shown on the Home card and stated in
+full on the milestone detail screen, plus an overdue state. Clearing the date returns the
+goal to open-ended.
+
+There is deliberately **no "on track" indicator**. Judging pace needs a contribution
+history and `Transaction` carries no timestamp, only a day-group label; deriving it from
+`bucketSpend.savings` would be wrong because that bucket pools every goal. Adding
+per-deposit timestamps is the prerequisite if that signal is ever wanted.
+
+Months remaining are rounded **up** — a partial month is still a month in which a
+contribution can be made, and rounding down would overstate the monthly figure.
+
+`MilestonePaceTests` guards the fidelity promise: **an undated milestone renders exactly
+as the prototype does.** That was verified once by pixel-diffing Home against a
+pre-feature baseline (identical but for the status-bar clock) and is now held by tests.
 
 ## Known deviations from the prototype
 
@@ -149,6 +169,9 @@ Saved state lives at `Library/Application Support/fintrack-v1.json` inside the a
 - Export writes a JSON file and opens the share sheet; the prototype only flipped its label.
 - Apostrophes match the prototype's ASCII `'` rather than typographic `'`. Em dashes, middle dots
   and the U+2212 minus sign in amounts are typographic, as in the source.
+- **The Home milestone card gains a pace line when a target date is set** — the first
+  deliberate departure from a layout the spec pinned as final, taken knowingly. Undated
+  milestones are unchanged.
 
 ## Tests
 

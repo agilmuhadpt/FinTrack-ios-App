@@ -253,6 +253,23 @@ struct HomeView: View {
         }
     }
 
+    /// The one derived number a target date earns: what finishing on time costs per
+    /// month. Returns nil when there is no date, or when the goal is already funded and
+    /// a deadline no longer means anything.
+    private func paceLine(_ milestone: Milestone) -> (text: String, color: Color)? {
+        switch milestone.pace() {
+        case .noDate, .complete:
+            return nil
+        case .overdue(let days):
+            let unit = days == 1 ? "day" : "days"
+            return ("Overdue by \(days) \(unit)", FTColor.red)
+        case .due(let perMonth, _):
+            guard let date = milestone.targetDate else { return nil }
+            return (store.fmt(perMonth) + "/mo to finish by " + FinTrackFormatting.monthYear(date),
+                    theme.sub)
+        }
+    }
+
     private func milestoneCardBody(_ milestone: Milestone) -> some View {
         FTCard {
             VStack(alignment: .leading, spacing: 0) {
@@ -277,6 +294,18 @@ struct HomeView: View {
                     .foregroundStyle(theme.sub)
                     .lineLimit(1)
                     .padding(.top, 2)                                 // margin-top:2px
+
+                // Only when a target date is set. Without one the card is byte-identical
+                // to the prototype's, which is the point of making the date optional.
+                if let pace = paceLine(milestone) {
+                    Text(pace.text)
+                        .font(.system(size: 13, weight: .semibold))
+                        .ftTabular()
+                        .foregroundStyle(pace.color)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .padding(.top, 3)
+                }
 
                 FTProgressBar(progress: Double(milestone.pct) / 100,
                               height: 6,
