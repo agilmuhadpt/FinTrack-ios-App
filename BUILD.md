@@ -9,8 +9,27 @@ dependencies.
 open FinTrack.xcodeproj
 ```
 
-Then ⌘R. The scheme is `FinTrack`, bundle id `com.fintrack.app`. No signing team is configured,
-so it runs on the simulator as-is; to run on a device, set your team in Signing & Capabilities.
+Then ⌘R. The scheme is `FinTrack`, bundle id `com.agilmuhad.fintrack`.
+
+The simulator needs no signing and works from a fresh clone. **To build to a device**, copy
+`Config/Local.xcconfig.example` to `Config/Local.xcconfig` and put your own `DEVELOPMENT_TEAM` in
+it. That file is gitignored — a team ID identifies an Apple Developer account and is deliberately
+kept out of the repo — and `Config/Shared.xcconfig` includes it optionally, so its absence never
+breaks a simulator build.
+
+Installing over a wireless device pairing:
+
+```bash
+xcodebuild -project FinTrack.xcodeproj -scheme FinTrack -sdk iphoneos \
+  -destination 'generic/platform=iOS' -derivedDataPath .build/DeviceBuild \
+  -allowProvisioningUpdates build
+xcrun devicectl device install app --device <device-id> \
+  .build/DeviceBuild/Build/Products/Debug-iphoneos/FinTrack.app
+```
+
+First launch needs the developer certificate trusted on the phone (Settings → General → VPN &
+Device Management), which requires internet once. On a free Apple team the build expires after
+7 days and must be reinstalled.
 
 ## Build from the command line
 
@@ -41,8 +60,19 @@ FinTrack/
 
 ## The money coach
 
-The Coach tab talks to a **local Ollama** at `http://127.0.0.1:11434` — nothing leaves the machine
-and there is no API key. `NSAllowsLocalNetworking` is set so the simulator can reach the host.
+The Coach tab talks to a **local Ollama** — nothing leaves your network and there is no API key.
+
+The address resolves from, in order: the `-FTCoachHost` launch argument, the `coach_host` user
+default, else `http://127.0.0.1:11434`. Loopback is correct in the **simulator**, which shares the
+Mac's, but on a **real iPhone** loopback is the phone itself, so a device build must be pointed at
+the Mac's LAN address via **iOS Settings → FinTrack → Coach server** (the app ships a
+`Settings.bundle` for exactly this). Two further requirements on device:
+
+- Ollama must listen beyond loopback. The macOS app ignores `OLLAMA_HOST`; the setting is
+  "expose to the network" in its own preferences, which makes it bind `*:11434`. This exposes your
+  models to everyone on the network.
+- iOS gates local-network access behind a permission prompt (`NSLocalNetworkUsageDescription`).
+  Until it is allowed the connection fails silently and the coach uses its offline answers.
 
 ```bash
 ollama serve            # if it is not already running
@@ -94,7 +124,16 @@ xcrun simctl launch "iPhone 17 Pro" com.fintrack.app -FTTab loans -FTDark 1 -FTN
 | `-FTOverlay` | `entry` `settings` `wizard` `alert` `banner` `loan:<i>` `milestone:<i>` `account:<i>` |
 | `-FTFresh` | `1` — start from a blank ledger (**persists**; delete the saved file to undo) |
 | `-FTNoBanner` | `1` — suppress the timed launch banner |
+| `-FTDemo` | `1` — restore the seeded demo ledger before the UI appears |
 | `-FTAsk` | `"<text>"` — send one real message to the coach on launch |
+| `-FTCoachHost` | `"<addr>"` — set the Ollama address; **persisted** to `coach_host` |
+
+On a device, arguments go after a `--` separator:
+
+```bash
+xcrun devicectl device process launch --device <id> com.agilmuhad.fintrack \
+  -- -FTCoachHost 192.168.1.42 -FTAsk "Can I afford dinner out?"
+```
 
 Saved state lives at `Library/Application Support/fintrack-v1.json` inside the app container
 (`xcrun simctl get_app_container "iPhone 17 Pro" com.fintrack.app data`).

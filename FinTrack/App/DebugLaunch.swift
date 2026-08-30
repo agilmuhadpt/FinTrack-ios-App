@@ -36,6 +36,10 @@ enum DebugLaunch {
     /// Ollama round trip (prompt assembly, HTTP, parsing, rendering) can be verified
     /// without a tap.
     static var ask: String? { args["-FTAsk"] }
+    /// `-FTCoachHost <addr>` — persisted to the `coach_host` default so the address
+    /// survives later launches. This is how a physical device gets pointed at the Mac
+    /// without typing an IP into iOS Settings by hand.
+    static var coachHost: String? { args["-FTCoachHost"] }
     static var startFresh: Bool { args["-FTFresh"] == "1" }
     /// `-FTDemo 1` — restore the seeded demo ledger before the UI appears. UI tests mutate
     /// persistent state (a swipe really does delete and really does write to disk), so
@@ -68,6 +72,9 @@ enum DebugLaunch {
     /// Applies every recognised argument to the live state.
     @MainActor
     static func apply(store: AppStore, ui: UIState) {
+        if let coachHost, !coachHost.isEmpty {
+            UserDefaults.standard.set(coachHost, forKey: "coach_host")
+        }
         if resetToDemo { store.replaceAll(.demo()) }
         if startFresh { store.replaceAll(.empty(currency: "SAR")) }
         if let dark { store.dark = dark }
