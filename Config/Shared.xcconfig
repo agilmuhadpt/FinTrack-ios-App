@@ -1,0 +1,7 @@
+// Committed, shared build settings.
+//
+// Signing identity is deliberately NOT here — a team ID identifies an Apple Developer
+// account and does not belong in a shared repository. It lives in Config/Local.xcconfig,
+// which is gitignored. The `?` makes the include optional, so a fresh clone still builds
+// and tests on the simulator (which needs no signing) without any local setup.
+#include? "Local.xcconfig"

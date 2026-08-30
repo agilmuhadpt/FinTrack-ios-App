@@ -1,0 +1,9 @@
+// Copy to Config/Local.xcconfig and fill in your own team, then build to a device.
+//
+// Find your team ID with:
+//   security find-certificate -c "Apple Development: <your-apple-id>" -p \
+//     | openssl x509 -noout -subject | tr ',' '\n' | grep OU=
+//
+// Or in Xcode: Signing & Capabilities -> Team.
+
+DEVELOPMENT_TEAM = ABCDE12345

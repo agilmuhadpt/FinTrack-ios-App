@@ -297,7 +297,37 @@ enum CoachWire {
 
     // MARK: Configuration
 
-    static let host = "http://127.0.0.1:11434"
+    /// Where Ollama lives. `127.0.0.1` is correct in the simulator, which shares the
+    /// Mac's loopback — but on a real iPhone loopback is the PHONE, so the coach would
+    /// silently fall back to preview mode forever. On device, point this at the Mac's LAN
+    /// address via the "Coach server" field in iOS Settings (or the -FTCoachHost argument).
+    static var host: String {
+        if let override = launchArgumentHost ?? defaultsHost, !override.isEmpty {
+            return normalised(override)
+        }
+        return "http://127.0.0.1:11434"
+    }
+
+    /// `-FTCoachHost <url>` — used by tests and by `xcrun devicectl` launches.
+    private static var launchArgumentHost: String? {
+        let args = ProcessInfo.processInfo.arguments
+        guard let i = args.firstIndex(of: "-FTCoachHost"), i + 1 < args.count else { return nil }
+        return args[i + 1]
+    }
+
+    /// Settable from the iOS Settings app (see Settings.bundle), so a device build can be
+    /// pointed at the Mac without touching the app's own designed Settings screen.
+    private static var defaultsHost: String? {
+        UserDefaults.standard.string(forKey: "coach_host")
+    }
+
+    /// Accepts "192.168.1.42", "192.168.1.42:11434" or a full URL.
+    private static func normalised(_ raw: String) -> String {
+        var s = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !s.contains("://") { s = "http://" + s }
+        if URL(string: s)?.port == nil { s += ":11434" }
+        return s
+    }
 
     /// This machine has qwen3.5:9b installed.
     static let defaultModel = "qwen3.5:9b"

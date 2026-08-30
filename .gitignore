@@ -17,3 +17,6 @@ xcuserdata/
 .swiftpm/
 Packages/
 Package.resolved
+
+# Local signing identity — never commit a team ID
+Config/Local.xcconfig
