@@ -45,6 +45,46 @@ across four local models, the largest was the only one that invented figures, an
 was clean on every axis. `BUILD.md` has the table. Treat the coach's numbers as reliable and its
 verdicts as not.
 
+### Running the coach
+
+The coach is optional. Every other screen works offline, so the app is fully usable without
+it — skip this and Leo will simply say it has no server to talk to.
+
+Install [Ollama](https://ollama.com) and pull the default model:
+
+```bash
+ollama pull qwen3.5:4b
+```
+
+**In the simulator that is all you need.** The simulator shares the Mac's loopback, so
+`127.0.0.1:11434` just works.
+
+**On a real device it does not**, because `127.0.0.1` is then the phone itself. Two things
+have to be true. Ollama must listen beyond loopback — the macOS app ignores `OLLAMA_HOST`,
+so use its **Settings → Expose Ollama to the network** toggle. And the app has to know your
+Mac's address, from `ipconfig getifaddr en0`.
+
+Give it that address either per-device in **iOS Settings → FinTrack → Coach server**, or
+once at build time in `Config/Local.xcconfig` (gitignored, so your address stays out of the
+repo):
+
+```
+COACH_DEFAULT_HOST = 192.168.1.50:11434
+```
+
+Write it **without** the `http://` — an xcconfig treats `//` as a comment and would truncate
+the value. The app adds the scheme and port itself. The Settings field takes precedence over
+this baked default, so leave it blank unless you're overriding.
+
+Grant **Local Network** permission when iOS asks. If the coach falls back to preview text,
+check in this order: the Settings field isn't stale, Local Network is allowed, and then
+whether the request arrived at all — `grep GIN ~/.ollama/logs/server.log | grep <phone-ip>`
+separates "blocked on the phone" from "failed at the Mac" in one line. Note that loading
+`http://<mac>:11434` in Safari on the phone proves the *network*, not the app's permission.
+
+Your Mac's DHCP address will eventually move and break a baked default. A reservation on
+your router is the durable fix.
+
 ## Build
 
 ```bash
