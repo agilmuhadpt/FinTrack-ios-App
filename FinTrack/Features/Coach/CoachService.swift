@@ -401,17 +401,32 @@ enum CoachWire {
         return s
     }
 
-    /// This machine has qwen3.5:9b installed.
-    static let defaultModel = "qwen3.5:9b"
+    /// Measured against the real coach prompt on a 16GB M5, 3 runs each with `think:false`:
+    ///
+    ///     model         size    seconds   invented figures   markdown   false verdict
+    ///     qwen3.5:4b    3.4GB   6.6-10.6         0/3            0/3          0/3
+    ///     qwen3:8b      5.2GB   9.9-11.0         0/3            3/3          1/3
+    ///     qwen3.5:9b    6.6GB  14.9-16.0         2/3            0/3          1/3
+    ///     gemma3:4b     3.3GB   8.6- 9.4         1/3            0/3          3/3
+    ///
+    /// 9b was the default and is the worst of the four: slowest, and the only one to
+    /// invent figures — it summed the two debts into "15000 SAR total" in a prompt that
+    /// says not to calculate. Size did not help, because the task is recitation.
+    /// gemma3:4b is excluded from the preference list entirely: it volunteered "you're
+    /// crushing it" in 3/3 and derived completion percentages it was told not to, which
+    /// is precisely the failure the prompt guardrail exists to prevent.
+    static let defaultModel = "qwen3.5:4b"
 
-    /// Descending preference when the default is absent.
+    /// Descending preference when the default is absent. qwen3:8b is second despite
+    /// bolding every reply — `stripMarkdown` handles that, and it was the most accurate
+    /// on the pace fields.
     static let modelPreference = [
+        "qwen3.5:4b",
+        "qwen3:8b",
         "qwen3.5:9b",
         "qwen2.5:7b",
-        "qwen3.5:4b",
         "llama3.2:3b",
         "llama3.2:1b",
-        "gemma3:1b",
     ]
 
     private static let session: URLSession = {
@@ -476,7 +491,7 @@ enum CoachWire {
             let (data, response) = try await session.data(for: request)
             guard let http = response as? HTTPURLResponse, http.statusCode == 200 else { return .failed }
             guard let decoded = try? JSONDecoder().decode(ChatResponse.self, from: data) else { return .failed }
-            let text = stripThinking(decoded.message.content)
+            let text = stripMarkdown(stripThinking(decoded.message.content))
             guard !text.isEmpty else { return .failed }
             return .reply(text, model)
         } catch let error as URLError where error.code == .timedOut {
@@ -545,6 +560,36 @@ enum CoachWire {
         // An open with no close: everything after it is reasoning.
         if let open = out.range(of: "<think>", options: [.caseInsensitive]) {
             out = String(out[..<open.lowerBound])
+        }
+        return out.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// The prompt asks for plain text, and most models comply — but qwen3:8b bolded every
+    /// reply in 3/3 measured runs, and the coach bubble renders its string literally, so
+    /// the user would read `**Travel fund**` with the asterisks. Stripping is cheaper than
+    /// rendering Markdown: the coach's replies are one short paragraph, and emphasis it was
+    /// asked not to use carries no meaning worth preserving.
+    ///
+    /// Deliberately conservative. Single `_` is left alone (it appears inside words far more
+    /// often than as emphasis), and `*` is only unwrapped as a matched pair around
+    /// non-space content, so an asterisk used as a literal character survives.
+    static func stripMarkdown(_ raw: String) -> String {
+        var out = raw
+        let rules: [(String, String)] = [
+            ("\\*\\*(.+?)\\*\\*", "$1"),          // **bold**
+            ("__(.+?)__", "$1"),                  // __bold__
+            ("\\*(?=\\S)(.+?)(?<=\\S)\\*", "$1"), // *italic*, never across spaces
+            ("`(.+?)`", "$1"),                    // `code`
+            ("\\[(.+?)\\]\\((?:.+?)\\)", "$1"),   // [text](url) -> text
+            ("(?m)^\\s{0,3}#{1,6}\\s+", ""),      // # heading
+            ("(?m)^\\s{0,3}[-*+]\\s+", ""),       // - bullet
+        ]
+        for (pattern, template) in rules {
+            guard let regex = try? NSRegularExpression(pattern: pattern) else { continue }
+            out = regex.stringByReplacingMatches(in: out,
+                                                 options: [],
+                                                 range: NSRange(out.startIndex..., in: out),
+                                                 withTemplate: template)
         }
         return out.trimmingCharacters(in: .whitespacesAndNewlines)
     }

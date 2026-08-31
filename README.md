@@ -34,15 +34,16 @@ replaces all data.
 
 The coach tab talks to a **local Ollama instance** — nothing leaves the machine, and there is
 no API key. It sends a system prompt plus a JSON snapshot of the finances and asks for a plain
-reply under 90 words. Default model is `qwen3.5:9b`; the host is configurable in Settings, and
+reply under 90 words. Default model is `qwen3.5:4b`; the host is configurable in Settings, and
 the app falls back to canned preview text when Ollama is unreachable rather than surfacing an
 error.
 
-One honest caveat, measured rather than assumed: over five samples of an identical prompt the
-model was **numerically correct 5/5** and made **no false completion claims**, but **4/5 still
-volunteered "you're crushing it" / "you're on track"**, once contradicting itself in the same
-sentence as an overdue goal. Its figures are trustworthy; its verdicts are not. A prompt
-guardrail reduced this; a stronger model is the real lever. `BUILD.md` records the full run.
+One honest caveat, measured rather than assumed: the model reliably recites the figures it is
+handed and unreliably characterises them, volunteering "you're crushing it" over goals that are
+still outstanding. A prompt guardrail reduced this. Picking a *bigger* model does not — measured
+across four local models, the largest was the only one that invented figures, and a 3.4 GB model
+was clean on every axis. `BUILD.md` has the table. Treat the coach's numbers as reliable and its
+verdicts as not.
 
 ## Build
 

@@ -102,11 +102,12 @@ the Mac's LAN address via **iOS Settings → FinTrack → Coach server** (the ap
 
 ```bash
 ollama serve            # if it is not already running
-ollama pull qwen3.5:9b  # the default; see the preference list below
+ollama pull qwen3.5:4b  # the default; see the preference list below
 ```
 
-Model resolution: `qwen3.5:9b`, else `qwen2.5:7b`, `qwen3.5:4b`, `llama3.2:3b`, `llama3.2:1b`,
-`gemma3:1b`, else the first model `/api/tags` reports. The tab warms the model on appear and the
+Model resolution: `qwen3.5:4b`, else `qwen3:8b`, `qwen3.5:9b`, `qwen2.5:7b`, `llama3.2:3b`,
+`llama3.2:1b`, else the first model `/api/tags` reports. `gemma3:4b` is deliberately absent
+— see below. The tab warms the model on appear and the
 request sends `keep_alive: 30m`, so only the first message of a session pays the load cost.
 
 The request also sends **`think: false`**, which matters a great deal. Qwen 3.5 is a reasoning
@@ -143,8 +144,33 @@ claims** and **5/5 numerically correct**. What remains is characterisation — 4
 volunteered "you're crushing it" or "you're on track", once contradicting itself
 ("crushing your Loan collection goal, but it's overdue by 12 days"). Note the demo tone is
 Playful and the prompt asks for "warm, playful", so enthusiasm is requested; the defect is
-enthusiasm that contradicts the data. No snapshot field fixes this — a stronger model is
-the lever. Treat the coach's figures as reliable and its verdicts as not.
+enthusiasm that contradicts the data. No snapshot field fixes this. Treat the coach's
+figures as reliable and its verdicts as not.
+
+**"A stronger model is the lever" was wrong**, and this section said so until it was
+measured. Three runs per model against the real prompt with `think:false`, on a 16GB M5:
+
+| model | size | seconds | invented figures | markdown | false verdict |
+|---|---|---|---|---|---|
+| `qwen3.5:4b` | 3.4GB | 6.6-10.6 | 0/3 | 0/3 | **0/3** |
+| `qwen3:8b` | 5.2GB | 9.9-11.0 | 0/3 | **3/3** | 1/3 |
+| `qwen3.5:9b` | 6.6GB | 14.9-16.0 | **2/3** | 0/3 | 1/3 |
+| `gemma3:4b` | 3.3GB | 8.6-9.4 | 1/3 | 0/3 | **3/3** |
+
+The largest model was the worst: slowest, and the only one to invent figures — it summed
+the two debts into "15000 SAR total" and produced 450 and 600 from nowhere, in a prompt
+that says not to calculate. Size does not help when the task is recitation. The default is
+now `qwen3.5:4b`, which was clean on every axis and half the memory.
+
+`gemma3:4b` is excluded from the preference list: 3/3 false verdicts ("fantastic
+progress", "you're crushing it", "you're on track") plus completion percentages it was
+told not to derive, and it prefixes replies with "Okay, Leo here!". Its warmth is a
+liability here.
+
+`qwen3:8b` was the most accurate on the pace fields but bolded every reply, which the
+coach bubble would render literally as `**Travel fund**`. `stripMarkdown` removes emphasis
+the prompt already asked the model not to use; it is deliberately conservative, leaving a
+lone `*`, an underscore inside a word, and `2 * 3` untouched.
 
 **With Ollama stopped the app still works** — the coach falls back to the prototype's deterministic
 preview answer, computed from real data.
