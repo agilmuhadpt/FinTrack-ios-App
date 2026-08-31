@@ -8,8 +8,8 @@ import XCTest
 /// business mirror of Savings.
 final class BusinessMilestoneTests: FinTrackUITestCase {
 
-    /// Seeded business milestones: Q3 revenue target 18,400/30,000 (61%),
-    /// Runway reserve 5,000/15,000 (33%), Invoice collection 1,450/3,000 (48%).
+    /// Seeded business milestones: Q3 revenue target 9,000/15,000 (60%),
+    /// Runway reserve 2,000/8,000 (25%), Invoice collection 550/1,200 (46%).
 
     func testBusinessMilestoneOpensItsDetailScreen() {
         launch(extra: ["-FTMode", "business"])
@@ -26,15 +26,15 @@ final class BusinessMilestoneTests: FinTrackUITestCase {
         require(app.staticTexts["Runway reserve"], "the business milestone").tap()
         require(app.staticTexts["Add money"], "the detail screen")
 
-        // 5,000 -> 10,000 of 15,000 is 33% -> 67%.
-        XCTAssertTrue(app.staticTexts["33%"].exists, "starts at 33%")
+        // 2,000 -> 3,200 of 8,000 is 25% -> 40%.
+        XCTAssertTrue(app.staticTexts["25%"].exists, "starts at 25%")
         let field = app.textFields.firstMatch
         field.tap()
-        field.typeText("5000")
+        field.typeText("1200")
         app.buttons["Add"].tap()
 
-        XCTAssertTrue(app.staticTexts["67%"].waitForExistence(timeout: 5),
-                      "the business goal advances to 67%")
+        XCTAssertTrue(app.staticTexts["40%"].waitForExistence(timeout: 5),
+                      "the business goal advances to 40%")
     }
 
     /// The footnote has to tell the truth about which bucket the money lands in.
@@ -64,20 +64,20 @@ final class BusinessMilestoneTests: FinTrackUITestCase {
     /// bar — the clearest end-to-end proof the two features are wired together.
     func testBusinessDepositMovesTheStudioBar() {
         launch(extra: ["-FTMode", "business"])
-        XCTAssertTrue(app.staticTexts["31%"].waitForExistence(timeout: 10),
-                      "Profit starts at 31% of 6,200")
+        XCTAssertTrue(app.staticTexts["30%"].waitForExistence(timeout: 10),
+                      "Profit starts at 30% of 5,000")
 
         require(app.staticTexts["Runway reserve"], "the business milestone").tap()
         let field = app.textFields.firstMatch
         field.tap()
-        field.typeText("3800")
+        field.typeText("2500")
         app.buttons["Add"].tap()
         app.buttons["Back"].tap()
 
-        // Profit 1,900 -> 5,700 of 10,000 = 57%; Ops 3,180 -> 32%; Growth 1,120 -> 11%.
-        XCTAssertTrue(app.staticTexts["57%"].waitForExistence(timeout: 5),
-                      "Profit rises to 57% once the deposit lands in the business ledger")
-        XCTAssertTrue(app.staticTexts["32%"].exists, "Ops share falls to 32%")
+        // Profit 1,500 -> 4,000 of 7,500 = 53%; Ops 2,550 -> 34%; Growth 950 -> 13%.
+        XCTAssertTrue(app.staticTexts["53%"].waitForExistence(timeout: 5),
+                      "Profit rises to 53% once the deposit lands in the business ledger")
+        XCTAssertTrue(app.staticTexts["34%"].exists, "Ops share falls to 34%")
     }
 
     /// Switching ledger in the entry sheet must not leave a stale index pointing into the

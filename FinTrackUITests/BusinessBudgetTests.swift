@@ -3,7 +3,7 @@ import XCTest
 /// The Studio budget bar, which used to be a hardcoded 48/22/30 inherited from the
 /// prototype because the app recorded no business expenses at all.
 ///
-/// The seed is 3,180 / 1,120 / 1,900 of 6,200 = 51/18/31, chosen so it does NOT reproduce
+/// The seed is 2,550 / 950 / 1,500 of 5,000 = 51/19/30, chosen so it does NOT reproduce
 /// the old hardcoded 48/22/30. Even so, a static reading proves little: the real check is
 /// recording an expense and watching every share move, which is what these tests do.
 final class BusinessBudgetTests: FinTrackUITestCase {
@@ -32,23 +32,23 @@ final class BusinessBudgetTests: FinTrackUITestCase {
         requireGone(app.staticTexts["New entry"], "the sheet after saving")
     }
 
-    /// 3,180 / 1,120 / 1,900 = 51/18/31. Add 3,800 to Growth and the totals become
-    /// 3,180 / 4,920 / 1,900 of 10,000 = 32/49/19. Every share moves, including the two
+    /// 2,550 / 950 / 1,500 = 51/19/30. Add 2,000 to Growth and the totals become
+    /// 2,550 / 2,950 / 1,500 of 7,000 = 36/42/21. Every share moves, including the two
     /// buckets that were not touched — which is only possible if the bar is computed.
     func testRecordingABusinessExpenseMovesEveryShare() {
         launchBusiness()
         XCTAssertTrue(app.staticTexts["51%"].exists, "Ops starts at 51%")
-        XCTAssertTrue(app.staticTexts["18%"].exists, "Growth starts at 18%")
-        XCTAssertTrue(app.staticTexts["31%"].exists, "Profit starts at 31%")
+        XCTAssertTrue(app.staticTexts["19%"].exists, "Growth starts at 19%")
+        XCTAssertTrue(app.staticTexts["30%"].exists, "Profit starts at 30%")
 
-        // 3,180 / 4,920 / 1,900 of 10,000 = 32/49/19.
-        recordBusinessExpense(bucket: "Growth", amount: "3800")
+        // 2,550 / 2,950 / 1,500 of 7,000 = 36/42/21.
+        recordBusinessExpense(bucket: "Growth", amount: "2000")
 
-        XCTAssertTrue(app.staticTexts["32%"].waitForExistence(timeout: 5),
-                      "Ops share falls to 32% as the denominator grows")
-        XCTAssertTrue(app.staticTexts["49%"].exists, "Growth rises to 49%")
-        XCTAssertTrue(app.staticTexts["19%"].exists, "Profit share falls to 19%")
-        XCTAssertFalse(app.staticTexts["18%"].exists,
+        XCTAssertTrue(app.staticTexts["36%"].waitForExistence(timeout: 5),
+                      "Ops share falls to 36% as the denominator grows")
+        XCTAssertTrue(app.staticTexts["42%"].exists, "Growth rises to 42%")
+        XCTAssertTrue(app.staticTexts["21%"].exists, "Profit share falls to 21%")
+        XCTAssertFalse(app.staticTexts["19%"].exists,
                        "the starting split must be gone — the bar is computed, not fixed")
     }
 
@@ -59,10 +59,12 @@ final class BusinessBudgetTests: FinTrackUITestCase {
         recordBusinessExpense(bucket: "Ops", amount: "1000")
 
         app.buttons["Personal"].firstMatch.tap()
-        XCTAssertTrue(app.staticTexts["52%"].waitForExistence(timeout: 5),
-                      "personal Needs stays 52% — 2,600 of 5,000")
-        XCTAssertTrue(app.staticTexts["26%"].exists, "personal Wants stays 26%")
-        XCTAssertTrue(app.staticTexts["22%"].exists, "personal Savings stays 22%")
+        XCTAssertTrue(app.staticTexts["50%"].waitForExistence(timeout: 5),
+                      "personal Needs stays 50% — 2,000 of 4,000")
+        XCTAssertTrue(app.staticTexts["28%"].exists, "personal Wants stays 28%")
+        // 900 of 4,000 is 22.5%, and the app rounds with floor(n + 0.5) like JS
+        // Math.round — so it displays 23, not the 22 that banker's rounding gives.
+        XCTAssertTrue(app.staticTexts["23%"].exists, "personal Savings stays 23%")
     }
 
     /// And the reverse: a personal expense must not appear in the business bar.
@@ -82,6 +84,6 @@ final class BusinessBudgetTests: FinTrackUITestCase {
         app.buttons["Studio"].firstMatch.tap()
         XCTAssertTrue(app.staticTexts["51%"].waitForExistence(timeout: 5),
                       "business Ops unchanged at 51%")
-        XCTAssertTrue(app.staticTexts["31%"].exists, "business Profit unchanged at 31%")
+        XCTAssertTrue(app.staticTexts["30%"].exists, "business Profit unchanged at 30%")
     }
 }

@@ -315,10 +315,8 @@ struct AppData: Codable, Hashable {
                 Milestone(name: "Invoice collection", saved: 550, target: 1200, colorHex: "#FF9F0A"),
             ],
             bucketSpend: BucketSpend(needs: 2000, wants: 1100, savings: 900),
-            // Deliberately NOT a ratio that reproduces the prototype's old hardcoded
-            // 48/22/30 — that made a screenshot unable to tell computed from fake, and
-            // implied Studio had spent in exactly that proportion. These are
-            // plausible allocations against the 5,500/mo Studio income: 51/19/30.
+            // Not a ratio that reproduces the prototype's old hardcoded 48/22/30 — that
+            // made a screenshot unable to tell computed from fake. 51/19/30 of 5,000.
             businessBucketSpend: BusinessBucketSpend(ops: 2550, growth: 950, profit: 1500),
             coach: Coach(name: "Leo", emoji: "\u{1F60A}", tone: .playful),
             reminders: Reminders(am: "08:00", pm: "20:00"),
@@ -326,13 +324,13 @@ struct AppData: Codable, Hashable {
                 DayGroup(label: "Today", items: [
                     Transaction(glyph: "GR", tintHex: "#E9F6EC", colorHex: "#248A3D", title: "Groceries",
                                 sub: "Northbank \u{00B7} Needs", amount: "\u{2212}92.40", pos: false, acct: "Northbank"),
-                    Transaction(glyph: "EX", tintHex: "#E8F1FE", colorHex: "#0A84FF", title: "Studio payout",
+                    Transaction(glyph: "ST", tintHex: "#E8F1FE", colorHex: "#0A84FF", title: "Studio payout",
                                 sub: "Business income", amount: "+1,450", pos: true, acct: "Northbank"),
                 ]),
                 DayGroup(label: "Yesterday", items: [
                     Transaction(glyph: "CF", tintHex: "#FFF3E0", colorHex: "#C87B1B", title: "Coffee",
                                 sub: "CityPay \u{00B7} Wants", amount: "\u{2212}12.50", pos: false, acct: "CityPay"),
-                    Transaction(glyph: "NY", tintHex: "#E9F6EC", colorHex: "#248A3D", title: "Adam repayment",
+                    Transaction(glyph: "AD", tintHex: "#E9F6EC", colorHex: "#248A3D", title: "Adam repayment",
                                 sub: "Loan collection", amount: "+250", pos: true, acct: "Northbank"),
                     Transaction(glyph: "FU", tintHex: "#FDEBEA", colorHex: "#D2322A", title: "Fuel",
                                 sub: "Northbank \u{00B7} Needs", amount: "\u{2212}74.00", pos: false, acct: "Northbank"),
