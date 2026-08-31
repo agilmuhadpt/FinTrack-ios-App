@@ -15,7 +15,7 @@ struct RootView: View {
 
     var body: some View {
         ZStack {
-            // Theme change cross-fades backgrounds over 300ms (README, Interactions).
+            // Theme change cross-fades backgrounds over 300ms (DESIGN-HANDOFF.md, Interactions).
             theme.bg
                 .ignoresSafeArea()
                 .animation(FTMotion.themeCrossfade, value: store.dark)

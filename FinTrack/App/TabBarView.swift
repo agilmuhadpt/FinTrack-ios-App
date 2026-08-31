@@ -6,7 +6,7 @@ import SwiftUI
 /// backdrop-filter:blur(24px) saturate(180%); border-top:0.5px solid var(--sep);
 /// justify-content:space-around`.
 ///
-/// Tab switching is intentionally NOT animated — the README calls it a high-frequency
+/// Tab switching is intentionally NOT animated — the handoff calls it a high-frequency
 /// action, so only the press scale (0.92) animates.
 struct TabBarView: View {
 

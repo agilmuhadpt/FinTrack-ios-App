@@ -74,10 +74,10 @@ In descending order of likelihood:
   `BUILD.md`: the milestone pace line on the Home card, the entry sheet's Ledger row,
   business milestone cards becoming tappable, and one added sentence in the coach prompt.
   Each was put to the user and approved.
-- **The repo is PRIVATE and must stay that way unless the seed data is scrubbed.**
-  `README.md`, `FinTrack.dc.html` and `Models.swift` carry real-looking balances, income,
-  and four named individuals with amounts they owe. Opening the repo would need those
-  replaced *and* history rewritten, since the figures are in every commit from `fa588a6`.
+- **The repo is PUBLIC** as of 2026-08-31. The seed figures and names in `Models.swift`,
+  `DESIGN-HANDOFF.md` and `FinTrack.dc.html` were replaced with fictional ones and the
+  history rewritten before publication, so nothing personal survives in any commit. Anything
+  added from here is visible immediately — keep real balances out of the seed.
 - **A strict-mode pre-push hook** (`.git/hooks/pre-push`) demands an interactive `YES` and
   aborts without a TTY, so an agent cannot push unattended. Bypassing it needs
   `--no-verify` and the user's explicit say-so.
@@ -97,7 +97,7 @@ In descending order of likelihood:
 
 - **Auto-memory:** `ios-sim-toolchain`, `fintrack-debug-launch-args`.
 - **engagement-state.json:** N/A — a code project, not an ENG engagement.
-- **Remote:** `github.com/agilmuhadpt/FinTrack-ios-App` — **private**. `main` tracks
+- **Remote:** `github.com/agilmuhadpt/FinTrack-ios-App` — **public**. `main` tracks
   `origin/main`.
 - **Commits**, newest first:
   - `5adfb92` this handoff · `8e93b5b` coach snapshot + prompt guardrail · `c5b7f6a` demo seed
@@ -107,8 +107,9 @@ In descending order of likelihood:
 - **Other:**
   - `BUILD.md` — build, test, device install, launch arguments, deviations, the coach's
     measured limits, and the bugs the test suite caught.
-  - `README.md` + `FinTrack.dc.html` — the design handoff and prototype. Code comments cite
-    line numbers in the prototype; do not delete it.
+  - `README.md` — the public front page (what the app does, build, layout, fidelity).
+  - `DESIGN-HANDOFF.md` + `FinTrack.dc.html` — the written spec and prototype, renamed from
+    `README.md` when the repo went public. Code comments cite them; do not delete either.
   - `Config/Local.xcconfig.example` — restoring device signing on a fresh clone.
 
 ## Suggested skills (to resume)

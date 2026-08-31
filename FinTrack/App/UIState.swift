@@ -2,7 +2,7 @@ import Foundation
 import Observation
 
 /// Which root tab is showing. The prototype switches tabs with no animation at all
-/// ("high-frequency action" — README, Interactions & Behavior), so nothing here is animated.
+/// ("high-frequency action" — DESIGN-HANDOFF.md, Interactions & Behavior), so nothing here is animated.
 enum Tab: Hashable {
     case home, activity, loans, coach
 }
