@@ -91,6 +91,9 @@ struct NewEntrySheet: View {
         // 34pt home-indicator padding itself) but NOT the keyboard, so the sheet lifts
         // above it and the fields stay visible.
         .ignoresSafeArea(.container)
+        // Default the ledger to whichever side of the app you were just looking at.
+        // RootView mounts this sheet fresh each time, so @State is new on every open.
+        .onAppear { draft.isBusiness = (store.mode == .business) }
     }
 
     // MARK: - Scrim
@@ -361,18 +364,50 @@ struct NewEntrySheet: View {
     // MARK: d. Bucket (expense only)
 
     private var bucketSection: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            caption("Bucket")
-            FTSegmentedControl(labels: Bucket.allCases.map(\.rawValue),
-                               selection: bucketBinding,
-                               style: .filled)
+        VStack(alignment: .leading, spacing: 12) {
+            // Which ledger this expense belongs to. Only expenses are scoped — income,
+            // loan payments and milestone deposits are the same in both modes, so this
+            // row appears nowhere else.
+            VStack(alignment: .leading, spacing: 0) {
+                caption("Ledger")
+                FTSegmentedControl(labels: ["Personal", "Studio"],
+                                   selection: ledgerBinding,
+                                   style: .filled)
+            }
+
+            VStack(alignment: .leading, spacing: 0) {
+                caption("Bucket")
+                if draft.isBusiness {
+                    FTSegmentedControl(labels: BusinessBucket.allCases.map(\.rawValue),
+                                       selection: businessBucketBinding,
+                                       style: .filled)
+                } else {
+                    FTSegmentedControl(labels: Bucket.allCases.map(\.rawValue),
+                                       selection: bucketBinding,
+                                       style: .filled)
+                }
+            }
         }
+    }
+
+    private var ledgerBinding: Binding<Int> {
+        Binding(
+            get: { draft.isBusiness ? 1 : 0 },
+            set: { draft.isBusiness = ($0 == 1) }
+        )
     }
 
     private var bucketBinding: Binding<Int> {
         Binding(
             get: { Bucket.allCases.firstIndex(of: draft.bucket) ?? 0 },
             set: { draft.bucket = Bucket.allCases[$0] }
+        )
+    }
+
+    private var businessBucketBinding: Binding<Int> {
+        Binding(
+            get: { BusinessBucket.allCases.firstIndex(of: draft.businessBucket) ?? 0 },
+            set: { draft.businessBucket = BusinessBucket.allCases[$0] }
         )
     }
 

@@ -29,13 +29,24 @@ final class AppStore {
     struct EntryDraft {
         var kind: EntryKind = .expense
         var bucket: Bucket = .needs
+        /// `true` routes an expense to `businessBucketSpend` and the Ops/Growth/Profit
+        /// buckets. Only expenses are scoped this way: income, loan payments and milestone
+        /// deposits behave identically in both modes.
+        var isBusiness = false
+        var businessBucket: BusinessBucket = .ops
         var acct = 0
         var loan = 0
         var ms = 0
 
-        init(kind: EntryKind = .expense, bucket: Bucket = .needs, acct: Int = 0, loan: Int = 0, ms: Int = 0) {
+        init(kind: EntryKind = .expense,
+             bucket: Bucket = .needs,
+             isBusiness: Bool = false,
+             businessBucket: BusinessBucket = .ops,
+             acct: Int = 0, loan: Int = 0, ms: Int = 0) {
             self.kind = kind
             self.bucket = bucket
+            self.isBusiness = isBusiness
+            self.businessBucket = businessBucket
             self.acct = acct
             self.loan = loan
             self.ms = ms
@@ -140,6 +151,10 @@ final class AppStore {
         AppStore.bucketPercent(data.bucketSpend[b], total: data.bucketSpend.total)
     }
 
+    func businessBucketPct(_ b: BusinessBucket) -> Int {
+        AppStore.bucketPercent(data.businessBucketSpend[b], total: data.businessBucketSpend.total)
+    }
+
     var budgetRuleLabel: String {
         mode == .personal ? "50 / 30 / 20" : "Ops / Growth / Profit"
     }
@@ -154,10 +169,12 @@ final class AppStore {
                 (name: "Savings", pct: bucketPct(.savings), colorHex: "#30D158"),
             ]
         }
+        // Computed from recorded business expenses. Was a hardcoded 48/22/30 inherited
+        // from the prototype, which had no business expenses to compute from.
         return [
-            (name: "Ops", pct: 48, colorHex: "#0A84FF"),
-            (name: "Growth", pct: 22, colorHex: "#FF9F0A"),
-            (name: "Profit", pct: 30, colorHex: "#30D158"),
+            (name: "Ops", pct: businessBucketPct(.ops), colorHex: "#0A84FF"),
+            (name: "Growth", pct: businessBucketPct(.growth), colorHex: "#FF9F0A"),
+            (name: "Profit", pct: businessBucketPct(.profit), colorHex: "#30D158"),
         ]
     }
 
@@ -253,12 +270,20 @@ final class AppStore {
         case .expense:
             let title = desc.isEmpty ? "Expense" : desc
             if !accounts.isEmpty { accounts[acctIdx].bal -= amount }
-            next.bucketSpend[draft.bucket] += amount
+            // The two bucket sets are separate ledgers; an expense lands in exactly one.
+            let bucketName: String
+            if draft.isBusiness {
+                next.businessBucketSpend[draft.businessBucket] += amount
+                bucketName = draft.businessBucket.rawValue
+            } else {
+                next.bucketSpend[draft.bucket] += amount
+                bucketName = draft.bucket.rawValue
+            }
             tx = Transaction(glyph: AppStore.glyph(from: title),
                              tintHex: "#FDEBEA",
                              colorHex: "#D2322A",
                              title: title,
-                             sub: acctName + " \u{00B7} " + draft.bucket.rawValue,
+                             sub: acctName + " \u{00B7} " + bucketName,
                              amount: "\u{2212}" + fmtN(amount),
                              pos: false,
                              acct: acctName)

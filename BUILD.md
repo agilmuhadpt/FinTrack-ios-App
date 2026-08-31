@@ -158,6 +158,33 @@ contribution can be made, and rounding down would overstate the monthly figure.
 as the prototype does.** That was verified once by pixel-diffing Home against a
 pre-feature baseline (identical but for the status-bar clock) and is now held by tests.
 
+## Business expenses and the Studio bar
+
+Business spend is recorded separately from personal, in `BusinessBucketSpend`
+(Ops / Growth / Profit) alongside the personal `BucketSpend` (Needs / Wants / Savings).
+`BusinessBucket` is a distinct type from `Bucket` on purpose: one shared enum would make
+it possible for a "Needs" expense to land in the business bar.
+
+The New Entry sheet shows a **Ledger** row for expenses only — income, loan payments and
+milestone deposits behave identically in both modes — and it defaults to whichever mode
+you were last in. Choosing Studio swaps the Bucket row to Ops / Growth / Profit and
+routes the amount to `businessBucketSpend`.
+
+The Home bar in business mode is now computed from those totals. It was previously a
+hardcoded 48/22/30 carried over from the prototype, which recorded no business expenses
+at all and so had nothing to compute from.
+
+**The demo seed (3,200 / 1,450 / 2,000 of 6,650) still works out to 48/22/30**, which
+keeps the seeded app looking like the prototype but means a screenshot cannot tell
+"computed" from "hardcoded". `BusinessBudgetTests` settles it by recording an expense and
+asserting every share moves (32/48/20), including the two buckets left untouched — only
+possible if the denominator is real. Two further tests assert the ledgers stay separate in
+both directions.
+
+Known gap: **business milestones cannot receive deposits.** `saveEntry`'s milestone branch
+indexes `msPersonal` unconditionally, so the entry sheet's milestone picker never lists
+`msBusiness`. Pre-existing prototype behaviour, not introduced here.
+
 ## Known deviations from the prototype
 
 - The date header and the budget month are derived from the current date rather than the
@@ -172,6 +199,12 @@ pre-feature baseline (identical but for the status-bar clock) and is now held by
 - **The Home milestone card gains a pace line when a target date is set** — the first
   deliberate departure from a layout the spec pinned as final, taken knowingly. Undated
   milestones are unchanged.
+- **The New Entry sheet gains a Ledger row for expenses**, so business spending can be
+  recorded and the Studio bar can be real rather than a fixed 48/22/30.
+- Filled segmented controls are real `Button`s with an `.isSelected` trait. As `Text` with
+  a tap gesture they had no button semantics: VoiceOver could not tell they were tappable
+  or which was active, and Switch Control could not activate them. Rendering is unchanged
+  (`FTNoEffectButtonStyle`) — the prototype gives them no pressed state.
 
 ## Tests
 

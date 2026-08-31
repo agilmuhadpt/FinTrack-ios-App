@@ -165,6 +165,45 @@ struct DayGroup: Identifiable, Codable, Hashable {
     fileprivate enum CodingKeys: String, CodingKey { case id, label, items }
 }
 
+/// Where a business expense goes. The Studio counterpart to `Bucket`, kept as a
+/// separate type rather than folded into it: the two sets are never interchangeable, and
+/// a single enum would let a "Needs" expense land in the business bar.
+enum BusinessBucket: String, Codable, CaseIterable, Identifiable {
+    case ops = "Ops"
+    case growth = "Growth"
+    case profit = "Profit"
+
+    var id: String { rawValue }
+}
+
+/// Business spend by bucket. Before this existed the business bar was a hardcoded
+/// 48/22/30 carried over from the prototype, because the app recorded no business
+/// expenses at all and there was nothing to compute from.
+struct BusinessBucketSpend: Codable, Hashable {
+    var ops: Double = 0
+    var growth: Double = 0
+    var profit: Double = 0
+
+    var total: Double { ops + growth + profit }
+
+    subscript(b: BusinessBucket) -> Double {
+        get {
+            switch b {
+            case .ops: return ops
+            case .growth: return growth
+            case .profit: return profit
+            }
+        }
+        set {
+            switch b {
+            case .ops: ops = newValue
+            case .growth: growth = newValue
+            case .profit: profit = newValue
+            }
+        }
+    }
+}
+
 struct BucketSpend: Codable, Hashable {
     var needs: Double
     var wants: Double
@@ -227,6 +266,9 @@ struct AppData: Codable, Hashable {
     var msPersonal: [Milestone]
     var msBusiness: [Milestone]
     var bucketSpend: BucketSpend
+    /// Business-mode spend. Absent from every ledger written before business expenses
+    /// were recorded, and decodes to all-zero there.
+    var businessBucketSpend = BusinessBucketSpend()
     var coach: Coach
     var reminders: Reminders
     var days: [DayGroup]
@@ -238,7 +280,7 @@ struct AppData: Codable, Hashable {
 
     fileprivate enum CodingKeys: String, CodingKey {
         case currency, accounts, incomes, loans, msPersonal, msBusiness
-        case bucketSpend, coach, reminders, days
+        case bucketSpend, businessBucketSpend, coach, reminders, days
     }
 
     /// Exact seed data from `demoData()` in the prototype.
@@ -273,6 +315,7 @@ struct AppData: Codable, Hashable {
                 Milestone(name: "Invoice collection", saved: 550, target: 1200, colorHex: "#FF9F0A"),
             ],
             bucketSpend: BucketSpend(needs: 2000, wants: 1100, savings: 900),
+            businessBucketSpend: BusinessBucketSpend(ops: 2550, growth: 950, profit: 1500),
             coach: Coach(name: "Leo", emoji: "\u{1F60A}", tone: .playful),
             reminders: Reminders(am: "08:00", pm: "20:00"),
             days: [
@@ -301,6 +344,7 @@ struct AppData: Codable, Hashable {
             accounts: [], incomes: [], loans: [],
             msPersonal: [], msBusiness: [],
             bucketSpend: BucketSpend(needs: 0, wants: 0, savings: 0),
+            businessBucketSpend: BusinessBucketSpend(),
             coach: Coach(name: "Leo", emoji: "\u{1F60A}", tone: .playful),
             reminders: Reminders(am: "08:00", pm: "20:00"),
             days: []
@@ -489,6 +533,7 @@ extension AppData {
                   msPersonal: decodeValue(c, .msPersonal, base.msPersonal),
                   msBusiness: decodeValue(c, .msBusiness, base.msBusiness),
                   bucketSpend: decodeValue(c, .bucketSpend, base.bucketSpend),
+                  businessBucketSpend: decodeValue(c, .businessBucketSpend, base.businessBucketSpend),
                   coach: decodeValue(c, .coach, base.coach),
                   reminders: decodeValue(c, .reminders, base.reminders),
                   days: decodeValue(c, .days, base.days))

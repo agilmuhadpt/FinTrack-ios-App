@@ -170,18 +170,27 @@ struct FTSegmentedControl: View {
     private var filledBody: some View {
         HStack(spacing: metrics.gap) {
             ForEach(Array(labels.enumerated()), id: \.offset) { index, label in
-                Text(label)
-                    .font(.system(size: metrics.font, weight: .semibold))
-                    .lineLimit(1)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, metrics.vPadding)
-                    .foregroundStyle(selection == index ? Color.white : theme.segUnselectedText)
-                    .background {
-                        RoundedRectangle(cornerRadius: metrics.radius, style: .continuous)
-                            .fill(selection == index ? FTColor.blue : theme.segUnselectedBg)
-                    }
-                    .contentShape(Rectangle())
-                    .onTapGesture { selection = index }
+                // A real Button, not a Text with a tap gesture. As static text these
+                // segments had no button trait and no selected state, so VoiceOver could
+                // not tell they were tappable or which one was active — and Switch
+                // Control / Full Keyboard Access could not activate them at all.
+                // FTNoEffectButtonStyle keeps the rendering byte-identical: the prototype
+                // gives these no press transform, only a 200ms colour transition.
+                Button { selection = index } label: {
+                    Text(label)
+                        .font(.system(size: metrics.font, weight: .semibold))
+                        .lineLimit(1)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, metrics.vPadding)
+                        .foregroundStyle(selection == index ? Color.white : theme.segUnselectedText)
+                        .background {
+                            RoundedRectangle(cornerRadius: metrics.radius, style: .continuous)
+                                .fill(selection == index ? FTColor.blue : theme.segUnselectedBg)
+                        }
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(FTNoEffectButtonStyle())
+                .accessibilityAddTraits(selection == index ? .isSelected : [])
             }
         }
         .animation(FTMotion.resolved(FTMotion.press(0.2), reduceMotion: reduceMotion),
@@ -192,6 +201,12 @@ struct FTSegmentedControl: View {
 // MARK: - 4. Progress bar
 
 /// Pill-ended progress bar. 6pt on milestone cards, 10pt on detail screens and the budget bar.
+/// Renders a button's label with no press treatment at all. Used where the prototype
+/// specifies no pressed state, so button semantics can be added without changing pixels.
+struct FTNoEffectButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View { configuration.label }
+}
+
 struct FTProgressBar: View {
     let progress: Double
     var height: CGFloat = 6

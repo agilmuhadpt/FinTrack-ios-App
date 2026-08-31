@@ -172,6 +172,13 @@ enum CoachPrompt {
             monthSpendByBucket: .init(needs: data.bucketSpend.needs,
                                       wants: data.bucketSpend.wants,
                                       savings: data.bucketSpend.savings),
+            // Omitted entirely when nothing has been recorded, so the model is not handed
+            // three zeros to read as a real business picture.
+            businessSpendByBucket: data.businessBucketSpend.total > 0
+                ? .init(ops: data.businessBucketSpend.ops,
+                        growth: data.businessBucketSpend.growth,
+                        profit: data.businessBucketSpend.profit)
+                : nil,
             recentTransactions: data.days.prefix(2).map { day in
                 .init(label: day.label, items: day.items.map {
                     .init(glyph: $0.glyph, tint: $0.tintHex, color: $0.colorHex, title: $0.title,
@@ -196,6 +203,8 @@ enum CoachPrompt {
             part("loans", snapshot.loans),
             part("milestones", snapshot.milestones),
             part("monthSpendByBucket", snapshot.monthSpendByBucket),
+            // nil until a business expense is recorded, and compactMap drops it.
+            snapshot.businessSpendByBucket.flatMap { part("businessSpendByBucket", $0) },
             part("recentTransactions", snapshot.recentTransactions),
         ]
         let joined = fields.compactMap { $0 }.joined(separator: ",")
@@ -249,6 +258,7 @@ enum CoachPrompt {
         let loans: [Ln]
         let milestones: [Ms]
         let monthSpendByBucket: Buckets
+        var businessSpendByBucket: BizBuckets?
         let recentTransactions: [Day]
 
         struct Acct: Encodable { let name: String; let bal: Double }
@@ -265,6 +275,17 @@ enum CoachPrompt {
             let color: String
             var targetDate: String?
             var requiredPerMonth: Double?
+        }
+
+        struct BizBuckets: Encodable {
+            let ops: Double
+            let growth: Double
+            let profit: Double
+            enum CodingKeys: String, CodingKey {
+                case ops = "Ops"
+                case growth = "Growth"
+                case profit = "Profit"
+            }
         }
 
         struct Buckets: Encodable {
