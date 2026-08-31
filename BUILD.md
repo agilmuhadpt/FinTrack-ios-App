@@ -175,6 +175,31 @@ lone `*`, an underscore inside a word, and `2 * 3` untouched.
 **With Ollama stopped the app still works** — the coach falls back to the prototype's deterministic
 preview answer, computed from real data.
 
+### An unset server on device is now explicit
+
+`host` resolves `-FTCoachHost`, then the "Coach server" field in iOS Settings, then
+`COACH_DEFAULT_HOST` baked into `Info.plist` at build time, then loopback. Loopback is
+right in the simulator and useless on a phone, where `127.0.0.1` is the phone itself.
+
+That case used to produce the offline preview — text that reads like a working coach — so a
+blank field was indistinguishable from a working one. It now returns a distinct
+`.unconfigured` outcome naming the fix, and `warmUp`/`resolveModel` skip the doomed
+connection entirely.
+
+This matters because **installing the app fresh clears UserDefaults**, and with it the
+Settings value. A device reinstall silently un-configures the coach; that is what happened
+after the Release install, and it cost a session's debugging aimed at the network and the
+model instead.
+
+To have your own device builds come back configured, set `COACH_DEFAULT_HOST` in
+`Config/Local.xcconfig` (gitignored — a LAN address is personal). Two traps, both verified
+by building and reading the value back out of the built `Info.plist` rather than assuming:
+
+- **Declare the empty default BEFORE `#include? "Local.xcconfig"`** in `Shared.xcconfig`.
+  The last assignment wins, so declaring it after silently overwrote the local value.
+- **Write it without a scheme** — `192.168.1.50:11434`. An xcconfig treats `//` as a
+  comment, so `http://host` is truncated to `http:`. `normalised()` adds the scheme.
+
 ## Notifications
 
 Permission is requested only when the user changes a reminder time or finishes onboarding — never

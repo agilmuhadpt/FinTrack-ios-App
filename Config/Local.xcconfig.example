@@ -7,3 +7,12 @@
 // Or in Xcode: Signing & Capabilities -> Team.
 
 DEVELOPMENT_TEAM = ABCDE12345
+
+// Optional. The Ollama address your DEVICE builds should use out of the box. Without it a
+// reinstall clears the Settings value and the coach falls back to the phone's own loopback,
+// which can never work. Find your Mac's address with: ipconfig getifaddr en0
+//
+// Write it WITHOUT the scheme: an xcconfig treats `//` as a comment and would truncate
+// "http://host" to "http:". The app adds the scheme and port itself.
+//
+// COACH_DEFAULT_HOST = 192.168.1.50:11434

@@ -12,7 +12,7 @@
 			<key>Title</key>
 			<string>Money coach</string>
 			<key>FooterText</key>
-			<string>FinTrack's coach runs on a local Ollama model — nothing leaves your network. In the simulator it finds Ollama on the Mac automatically. On this iPhone, enter your Mac's address (for example 192.168.1.42) and make sure Ollama is listening beyond loopback. Leave blank to use the built-in offline answers.</string>
+			<string>FinTrack's coach runs on a local Ollama model — nothing leaves your network. In the simulator it finds Ollama on the Mac automatically. On this iPhone it cannot: enter your Mac's address (for example 192.168.1.42) and make sure Ollama is listening beyond loopback. Left blank on a phone, the coach will say it has no server to talk to rather than pretending to be offline. Reinstalling the app clears this field.</string>
 		</dict>
 		<dict>
 			<key>Type</key>

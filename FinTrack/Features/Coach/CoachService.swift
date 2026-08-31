@@ -115,6 +115,8 @@ final class CoachService {
             reply = fallback
         case .failed:
             reply = CoachPrompt.errorReply
+        case .unconfigured:
+            reply = CoachPrompt.unconfiguredReply
         }
         messages.append(ChatMessage(role: .coach, text: reply))
         isThinking = false
@@ -131,6 +133,14 @@ enum CoachPrompt {
 
     /// `'I couldn\'t reach the model just now — try again in a moment.'`
     static let errorReply = "I couldn't reach the model just now \u{2014} try again in a moment."
+
+    /// Shown instead of the offline preview when the app is on a phone with no server
+    /// address. The preview text reads like a working coach, which hid this for a whole
+    /// session — so this one names the fix instead.
+    static let unconfiguredReply =
+        "I don't have a coach server to talk to yet. Open the iOS Settings app "
+        + "\u{2192} FinTrack \u{2192} Coach server and enter your Mac's address, "
+        + "like http://192.168.1.50:11434, then ask me again."
 
     // MARK: System prompt
 
@@ -365,19 +375,49 @@ enum CoachWire {
         case unreachable
         /// Reached it, but it returned a non-200 or something undecodable.
         case failed
+        /// On device with no server address set. Distinct from `unreachable`: there is
+        /// nothing to reach, and the user has to type an address to fix it.
+        case unconfigured
     }
 
     // MARK: Configuration
 
-    /// Where Ollama lives. `127.0.0.1` is correct in the simulator, which shares the
-    /// Mac's loopback — but on a real iPhone loopback is the PHONE, so the coach would
-    /// silently fall back to preview mode forever. On device, point this at the Mac's LAN
-    /// address via the "Coach server" field in iOS Settings (or the -FTCoachHost argument).
+    /// Where Ollama lives, in descending precedence: the `-FTCoachHost` launch argument,
+    /// the "Coach server" field in iOS Settings, then `COACH_DEFAULT_HOST` baked in at
+    /// build time via Info.plist.
+    ///
+    /// `127.0.0.1` is the last resort and is correct ONLY in the simulator, which shares
+    /// the Mac's loopback. On a real iPhone loopback is the PHONE, so it can never reach
+    /// Ollama — see `isUnconfiguredOnDevice`.
     static var host: String {
         if let override = launchArgumentHost ?? defaultsHost, !override.isEmpty {
             return normalised(override)
         }
-        return "http://127.0.0.1:11434"
+        if let baked = buildDefaultHost, !baked.isEmpty {
+            return normalised(baked)
+        }
+        return loopback
+    }
+
+    static let loopback = "http://127.0.0.1:11434"
+
+    /// Set `COACH_DEFAULT_HOST` in `Config/Local.xcconfig` (gitignored) and device builds
+    /// come back already pointed at your Mac. Without it, installing the app fresh clears
+    /// UserDefaults — and with it the Settings value — leaving the coach on loopback.
+    /// A LAN address is personal, so the committed default is empty.
+    private static var buildDefaultHost: String? {
+        Bundle.main.object(forInfoDictionaryKey: "FTCoachDefaultHost") as? String
+    }
+
+    /// True when this build is on real hardware with nothing but loopback to talk to.
+    /// Requests would fail with a transport error indistinguishable from "Ollama is off",
+    /// which is how a wiped setting spent a session looking like a broken model.
+    static var isUnconfiguredOnDevice: Bool {
+        #if targetEnvironment(simulator)
+        return false
+        #else
+        return host == loopback
+        #endif
     }
 
     /// `-FTCoachHost <url>` — used by tests and by `xcrun devicectl` launches.
@@ -445,6 +485,8 @@ enum CoachWire {
     /// so this pays the cold-start cost while the user is still reading the greeting.
     /// Failures are ignored — this is an optimisation, never a precondition.
     static func warmUp(knownModel: String?) async -> String? {
+        // Nothing to warm, and on device this would sit on a doomed connection.
+        if isUnconfiguredOnDevice { return nil }
         let resolved: String?
         if let knownModel { resolved = knownModel } else { resolved = await resolveModel() }
         guard let name = resolved else { return nil }
@@ -473,6 +515,7 @@ enum CoachWire {
             }
         }
 
+        if isUnconfiguredOnDevice { return .unconfigured }
         guard let url = URL(string: host + "/api/chat") else { return .failed }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -509,6 +552,7 @@ enum CoachWire {
     /// `GET /api/tags`. Returns nil only when the daemon is unreachable; an unexpected but
     /// answered payload falls back to the default tag and lets `/api/chat` be the judge.
     static func resolveModel() async -> String? {
+        if isUnconfiguredOnDevice { return nil }
         guard let url = URL(string: host + "/api/tags") else { return defaultModel }
         var request = URLRequest(url: url)
         request.httpMethod = "GET"

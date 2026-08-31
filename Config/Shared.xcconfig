@@ -4,4 +4,17 @@
 // account and does not belong in a shared repository. It lives in Config/Local.xcconfig,
 // which is gitignored. The `?` makes the include optional, so a fresh clone still builds
 // and tests on the simulator (which needs no signing) without any local setup.
+
+// Build-time default for the coach's Ollama address, baked into Info.plist. Empty here on
+// purpose: a LAN address is personal, and this file is committed.
+//
+// Write it WITHOUT a scheme — "10.0.0.99:11434", not "http://10.0.0.99:11434". An xcconfig
+// treats `//` as a comment, so a URL is silently truncated to "http:" (verified). The app's
+// `normalised()` adds the scheme and the default port anyway.
+//
+// This declaration MUST come BEFORE the include. In an xcconfig the last assignment wins,
+// so declaring it afterwards silently overwrote whatever Local.xcconfig set — verified by
+// building with a value set and finding an empty string in the built Info.plist.
+COACH_DEFAULT_HOST =
+
 #include? "Local.xcconfig"
