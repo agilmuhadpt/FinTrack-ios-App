@@ -28,8 +28,34 @@ xcrun devicectl device install app --device <device-id> \
 ```
 
 First launch needs the developer certificate trusted on the phone (Settings → General → VPN &
-Device Management), which requires internet once. On a free Apple team the build expires after
-7 days and must be reinstalled.
+Device Management), which requires internet once.
+
+### Renewing the 7-day profile
+
+On a free Apple team the provisioning profile lasts 7 days, after which the app stops
+launching. **Rebuilding is not enough on its own.** Xcode reuses a cached profile while it
+is still valid, so a clean rebuild embeds the *same* expiry — verified: rebuilding a
+profile dated 2026-09-06 produced a build still dated 2026-09-06. The cached profile has to
+be evicted first:
+
+```bash
+rm ~/Library/Developer/Xcode/UserData/Provisioning\ Profiles/*.mobileprovision
+xcodebuild -project FinTrack.xcodeproj -scheme FinTrack -configuration Release \
+  -sdk iphoneos -destination 'generic/platform=iOS' \
+  -derivedDataPath .build/ReleaseBuild -allowProvisioningUpdates build
+xcrun devicectl device install app --device <device-id> \
+  .build/ReleaseBuild/Build/Products/Release-iphoneos/FinTrack.app
+```
+
+Confirm it actually renewed rather than assuming:
+
+```bash
+security cms -D -i .build/ReleaseBuild/Build/Products/Release-iphoneos/FinTrack.app/embedded.mobileprovision \
+  | grep -A1 ExpirationDate
+```
+
+This recurs weekly and cannot be avoided on a free team; a paid Developer Program
+membership extends provisioning to a year.
 
 ## Build from the command line
 

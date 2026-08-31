@@ -6,8 +6,9 @@ _Session: 2026-08-31 · Save target: repo (`docs/`) · Internal artifact — not
 
 In descending order of likelihood:
 
-1. **Rebuild and reinstall once the provisioning profile expires** — the free Apple team's
-   profile expires **2026-09-06**, after which the app will not launch on the device.
+1. **Renew the provisioning profile** — the free Apple team's profile expires
+   **2026-09-07**, after which the app will not launch on the device. Note that rebuilding
+   alone does NOT renew it; see Next actions.
 2. **New feature work.** The app is complete against the prototype and has grown three
    features beyond it; nothing is half-finished.
 3. **Coach quality**, if the user raises it — see Open threads for the known limitation.
@@ -32,20 +33,24 @@ In descending order of likelihood:
   row deletion reachable only by gesture; filled segmented controls with no button
   semantics; overlays not removing the background from the accessibility tree.
 - **In-flight:** Nothing. All work is committed.
-- **Not started:** No git remote — nothing has ever been pushed. Release performance is
-  unprofiled. The app has run on no device but this one.
+- **Not started:** Release performance is unprofiled. The app has run on no device but
+  this one.
 
 ## Next actions
 
-1. **If the app will not launch on the phone**, the profile has expired (2026-09-06).
-   Rebuild and reinstall — this regenerates it for another 7 days:
+1. **If the app will not launch on the phone**, the profile has expired (2026-09-07).
+   **Rebuilding alone does not renew it** — Xcode reuses a cached profile while it is still
+   valid, so a clean rebuild embeds the same expiry (verified). Evict the cache first:
    ```bash
+   rm ~/Library/Developer/Xcode/UserData/Provisioning\ Profiles/*.mobileprovision
    xcodebuild -project FinTrack.xcodeproj -scheme FinTrack -configuration Release \
      -sdk iphoneos -destination 'generic/platform=iOS' \
      -derivedDataPath .build/ReleaseBuild -allowProvisioningUpdates build
    xcrun devicectl device install app --device <device-id> \
      .build/ReleaseBuild/Build/Products/Release-iphoneos/FinTrack.app
    ```
+   Then confirm the new date rather than assuming — `security cms -D -i <app>/
+   embedded.mobileprovision | grep -A1 ExpirationDate`. Full recipe in `BUILD.md`.
    Needs `Config/Local.xcconfig` locally with a `DEVELOPMENT_TEAM`. **Use a USB cable** —
    the wireless pairing dropped repeatedly across the session; over USB it worked first try
    every time.
@@ -69,7 +74,13 @@ In descending order of likelihood:
   `BUILD.md`: the milestone pace line on the Home card, the entry sheet's Ledger row,
   business milestone cards becoming tappable, and one added sentence in the coach prompt.
   Each was put to the user and approved.
-- **No git remote.** Pushing was never requested; ask before adding one.
+- **The repo is PRIVATE and must stay that way unless the seed data is scrubbed.**
+  `README.md`, `FinTrack.dc.html` and `Models.swift` carry real-looking balances, income,
+  and four named individuals with amounts they owe. Opening the repo would need those
+  replaced *and* history rewritten, since the figures are in every commit from `fa588a6`.
+- **A strict-mode pre-push hook** (`.git/hooks/pre-push`) demands an interactive `YES` and
+  aborts without a TTY, so an agent cannot push unattended. Bypassing it needs
+  `--no-verify` and the user's explicit say-so.
 - Apostrophes deliberately match the prototype's ASCII `'`. Reversible in one pass.
 
 ## Blockers
@@ -86,8 +97,10 @@ In descending order of likelihood:
 
 - **Auto-memory:** `ios-sim-toolchain`, `fintrack-debug-launch-args`.
 - **engagement-state.json:** N/A — a code project, not an ENG engagement.
-- **Commits** (branch `main`, no remote), newest first:
-  - `8e93b5b` coach snapshot + prompt guardrail · `c5b7f6a` demo seed
+- **Remote:** `github.com/agilmuhadpt/FinTrack-ios-App` — **private**. `main` tracks
+  `origin/main`.
+- **Commits**, newest first:
+  - `5adfb92` this handoff · `8e93b5b` coach snapshot + prompt guardrail · `c5b7f6a` demo seed
   - `550f7ea` business milestone funding · `a1a5243` business expenses + computed bar
   - `3e2b772` milestone target dates · `f37011a` previous handoff
   - `bb487ba` coach host persistence · `a4ec97a` signing split · `fa588a6` the app
