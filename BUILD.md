@@ -99,6 +99,27 @@ accepts the flag for non-thinking models too (verified against `llama3.2:1b`), s
 unconditionally. `<think>` blocks are still stripped from replies as a fallback for models that
 ignore the flag.
 
+### What the coach is told, and what it still gets wrong
+
+Every derived figure is sent explicitly — `remaining`, `monthsRemaining`, `requiredPerMonth`,
+and a `status` of `"overdue by N days"` / `"complete"`. The rule this follows was learned
+the hard way: **numbers handed to the model come back correct; numbers it has to derive
+come back wrong.** Given only `targetDate: "Dec 2026"` it reported the Travel fund as
+"12 months" left — a figure belonging to a different milestone.
+
+The system prompt carries one sentence beyond the prototype's, telling it to use the
+supplied values and to treat a milestone as finished only when `status` says so. That was
+added after qwen3.5:9b, handed `saved 2400 / target 12000 / remaining 9600`, opened with
+"You crushed the Travel fund goal!".
+
+Measured over five samples of an identical prompt afterwards: **0/5 false completion
+claims** and **5/5 numerically correct**. What remains is characterisation — 4/5 still
+volunteered "you're crushing it" or "you're on track", once contradicting itself
+("crushing your Loan collection goal, but it's overdue by 12 days"). Note the demo tone is
+Playful and the prompt asks for "warm, playful", so enthusiasm is requested; the defect is
+enthusiasm that contradicts the data. No snapshot field fixes this — a stronger model is
+the lever. Treat the coach's figures as reliable and its verdicts as not.
+
 **With Ollama stopped the app still works** — the coach falls back to the prototype's deterministic
 preview answer, computed from real data.
 

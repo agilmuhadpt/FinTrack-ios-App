@@ -140,7 +140,15 @@ enum CoachPrompt {
         return "You are " + data.coach.name + ", a " + tone +
             " personal finance coach inside the FinTrack app. The user follows a 50/30/20 budget (Needs/Wants/Savings) and an avalanche debt strategy (highest debt first). " +
             "Answer using their real numbers from this snapshot: " + snapshotJSON(store: store) +
-            ". Be specific and actionable. Plain text only, no markdown, under 90 words."
+            // Guardrail. The prototype's prompt ended at "under 90 words"; this sentence
+            // is a deliberate addition. Observed on qwen3.5:9b: handed saved 2400 of
+            // target 12000 with remaining 9600, it opened with "You crushed the Travel fund
+            // goal!". The model recites supplied figures reliably and characterises them
+            // unreliably, so it is told to read status rather than judge progress.
+            ". Every figure you need is in the snapshot — use those values and do not " +
+            "calculate your own. A milestone is only finished when its status says " +
+            "\"complete\"; otherwise say what is still outstanding. " +
+            "Be specific and actionable. Plain text only, no markdown, under 90 words."
     }
 
     /// `JSON.stringify(snapshot)`. The top level is assembled by hand because
@@ -158,17 +166,7 @@ enum CoachPrompt {
                       amount: $0.amt,
                       direction: $0.dir == .inbound ? "they owe me" : "I owe them")
             },
-            milestones: data.msPersonal.map { m in
-                var out = Snapshot.Ms(name: m.name, saved: m.saved,
-                                      target: m.target, color: m.colorHex)
-                if let date = m.targetDate {
-                    out.targetDate = FinTrackFormatting.monthYear(date)
-                    if case .due(let perMonth, _) = m.pace() {
-                        out.requiredPerMonth = (perMonth * 100).rounded() / 100
-                    }
-                }
-                return out
-            },
+            milestones: data.msPersonal.map(Snapshot.Ms.init(milestone:)),
             monthSpendByBucket: .init(needs: data.bucketSpend.needs,
                                       wants: data.bucketSpend.wants,
                                       savings: data.bucketSpend.savings),
@@ -268,13 +266,47 @@ enum CoachPrompt {
         /// so the model is never handed a null to reason about. Without them the coach has
         /// no time dimension for savings at all, which is why "how am I doing on my
         /// milestones" used to get a vague answer.
+        /// Every derived figure is sent explicitly rather than left for the model to work
+        /// out. Observed failure: given only `targetDate: "Dec 2026"` it had to subtract
+        /// dates in its head to say how long was left, and reported the Travel fund as
+        /// "12 months" — a figure borrowed from a different milestone. The monthly amounts
+        /// in the same reply were correct, because those were handed to it.
         struct Ms: Encodable {
             let name: String
             let saved: Double
             let target: Double
             let color: String
+            /// Still to save. Trivial to derive, and therefore trivial to get wrong.
+            var remaining: Double?
             var targetDate: String?
+            var monthsRemaining: Int?
             var requiredPerMonth: Double?
+            /// Present only when the date needs interpreting: "overdue by 12 days" or
+            /// "complete". Absent means on the normal path.
+            var status: String?
+
+            /// Fills in everything the pace calculation already knows, so the model never
+            /// has to derive a date difference.
+            init(milestone m: Milestone) {
+                name = m.name
+                saved = m.saved
+                target = m.target
+                color = m.colorHex
+                remaining = (m.remaining * 100).rounded() / 100
+                guard let date = m.targetDate else { return }
+                targetDate = FinTrackFormatting.monthYear(date)
+                switch m.pace() {
+                case .due(let perMonth, let months):
+                    monthsRemaining = months
+                    requiredPerMonth = (perMonth * 100).rounded() / 100
+                case .overdue(let days):
+                    status = "overdue by \(days) day\(days == 1 ? "" : "s")"
+                case .complete:
+                    status = "complete"
+                case .noDate:
+                    break
+                }
+            }
         }
 
         struct BizBuckets: Encodable {
