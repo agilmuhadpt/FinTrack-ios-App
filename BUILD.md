@@ -174,12 +174,13 @@ The Home bar in business mode is now computed from those totals. It was previous
 hardcoded 48/22/30 carried over from the prototype, which recorded no business expenses
 at all and so had nothing to compute from.
 
-**The demo seed (3,200 / 1,450 / 2,000 of 6,650) still works out to 48/22/30**, which
-keeps the seeded app looking like the prototype but means a screenshot cannot tell
-"computed" from "hardcoded". `BusinessBudgetTests` settles it by recording an expense and
-asserting every share moves (32/48/20), including the two buckets left untouched — only
-possible if the denominator is real. Two further tests assert the ledgers stay separate in
-both directions.
+The demo seed is 3,180 / 1,120 / 1,900 = **51/18/31**, chosen so it does *not* reproduce
+the prototype's old hardcoded 48/22/30 — reusing that ratio made a screenshot unable to
+tell "computed" from "fake" and implied the business had spent in exactly that proportion.
+`BusinessBudgetTests` proves the bar is live by recording an expense and asserting every
+share moves (to 32/49/19), including the two buckets left untouched — only possible if the
+denominator is real. Two further tests assert the ledgers stay separate in both
+directions.
 
 Business milestones can be funded, from the entry sheet (choose Studio under Ledger)
 or by tapping the card on Home. A business deposit counts toward **Profit** — the business

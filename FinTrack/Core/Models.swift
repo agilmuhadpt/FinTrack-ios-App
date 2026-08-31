@@ -315,6 +315,10 @@ struct AppData: Codable, Hashable {
                 Milestone(name: "Invoice collection", saved: 550, target: 1200, colorHex: "#FF9F0A"),
             ],
             bucketSpend: BucketSpend(needs: 2000, wants: 1100, savings: 900),
+            // Deliberately NOT a ratio that reproduces the prototype's old hardcoded
+            // 48/22/30 — that made a screenshot unable to tell computed from fake, and
+            // implied Studio had spent in exactly that proportion. These are
+            // plausible allocations against the 5,500/mo Studio income: 51/19/30.
             businessBucketSpend: BusinessBucketSpend(ops: 2550, growth: 950, profit: 1500),
             coach: Coach(name: "Leo", emoji: "\u{1F60A}", tone: .playful),
             reminders: Reminders(am: "08:00", pm: "20:00"),

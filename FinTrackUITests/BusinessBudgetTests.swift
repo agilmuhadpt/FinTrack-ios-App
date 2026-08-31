@@ -3,9 +3,9 @@ import XCTest
 /// The Studio budget bar, which used to be a hardcoded 48/22/30 inherited from the
 /// prototype because the app recorded no business expenses at all.
 ///
-/// The demo seed (3,200 / 1,450 / 2,000 of 6,650) still computes to 48/22/30, so a
-/// screenshot alone cannot distinguish "computed" from "still hardcoded". The only proof
-/// is recording an expense and watching the bar move — which is what these tests do.
+/// The seed is 3,180 / 1,120 / 1,900 of 6,200 = 51/18/31, chosen so it does NOT reproduce
+/// the old hardcoded 48/22/30. Even so, a static reading proves little: the real check is
+/// recording an expense and watching every share move, which is what these tests do.
 final class BusinessBudgetTests: FinTrackUITestCase {
 
     private func launchBusiness() {
@@ -32,23 +32,24 @@ final class BusinessBudgetTests: FinTrackUITestCase {
         requireGone(app.staticTexts["New entry"], "the sheet after saving")
     }
 
-    /// 3,200 / 1,450 / 2,000 = 48/22/30. Add 3,350 to Growth and the totals become
-    /// 3,200 / 4,800 / 2,000 of 10,000 = 32/48/20. Every share moves, including the two
+    /// 3,180 / 1,120 / 1,900 = 51/18/31. Add 3,800 to Growth and the totals become
+    /// 3,180 / 4,920 / 1,900 of 10,000 = 32/49/19. Every share moves, including the two
     /// buckets that were not touched — which is only possible if the bar is computed.
     func testRecordingABusinessExpenseMovesEveryShare() {
         launchBusiness()
-        XCTAssertTrue(app.staticTexts["48%"].exists, "Ops starts at 48%")
-        XCTAssertTrue(app.staticTexts["22%"].exists, "Growth starts at 22%")
-        XCTAssertTrue(app.staticTexts["30%"].exists, "Profit starts at 30%")
+        XCTAssertTrue(app.staticTexts["51%"].exists, "Ops starts at 51%")
+        XCTAssertTrue(app.staticTexts["18%"].exists, "Growth starts at 18%")
+        XCTAssertTrue(app.staticTexts["31%"].exists, "Profit starts at 31%")
 
-        recordBusinessExpense(bucket: "Growth", amount: "3350")
+        // 3,180 / 4,920 / 1,900 of 10,000 = 32/49/19.
+        recordBusinessExpense(bucket: "Growth", amount: "3800")
 
         XCTAssertTrue(app.staticTexts["32%"].waitForExistence(timeout: 5),
                       "Ops share falls to 32% as the denominator grows")
-        XCTAssertTrue(app.staticTexts["48%"].exists, "Growth rises to 48%")
-        XCTAssertTrue(app.staticTexts["20%"].exists, "Profit share falls to 20%")
-        XCTAssertFalse(app.staticTexts["22%"].exists,
-                       "the old hardcoded split must be gone")
+        XCTAssertTrue(app.staticTexts["49%"].exists, "Growth rises to 49%")
+        XCTAssertTrue(app.staticTexts["19%"].exists, "Profit share falls to 19%")
+        XCTAssertFalse(app.staticTexts["18%"].exists,
+                       "the starting split must be gone — the bar is computed, not fixed")
     }
 
     /// A business expense must not touch the personal 50/30/20 bar. The two bucket sets
@@ -79,8 +80,8 @@ final class BusinessBudgetTests: FinTrackUITestCase {
         requireGone(app.staticTexts["New entry"], "the sheet after saving")
 
         app.buttons["Studio"].firstMatch.tap()
-        XCTAssertTrue(app.staticTexts["48%"].waitForExistence(timeout: 5),
-                      "business Ops unchanged at 48%")
-        XCTAssertTrue(app.staticTexts["30%"].exists, "business Profit unchanged at 30%")
+        XCTAssertTrue(app.staticTexts["51%"].waitForExistence(timeout: 5),
+                      "business Ops unchanged at 51%")
+        XCTAssertTrue(app.staticTexts["31%"].exists, "business Profit unchanged at 31%")
     }
 }

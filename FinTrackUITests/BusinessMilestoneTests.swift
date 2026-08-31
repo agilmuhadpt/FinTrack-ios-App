@@ -64,19 +64,19 @@ final class BusinessMilestoneTests: FinTrackUITestCase {
     /// bar — the clearest end-to-end proof the two features are wired together.
     func testBusinessDepositMovesTheStudioBar() {
         launch(extra: ["-FTMode", "business"])
-        XCTAssertTrue(app.staticTexts["30%"].waitForExistence(timeout: 10),
-                      "Profit starts at 30% of 6,650")
+        XCTAssertTrue(app.staticTexts["31%"].waitForExistence(timeout: 10),
+                      "Profit starts at 31% of 6,200")
 
         require(app.staticTexts["Runway reserve"], "the business milestone").tap()
         let field = app.textFields.firstMatch
         field.tap()
-        field.typeText("3350")
+        field.typeText("3800")
         app.buttons["Add"].tap()
         app.buttons["Back"].tap()
 
-        // Profit 2,000 -> 5,350 of 10,000 = 54%; Ops 3,200 -> 32%; Growth 1,450 -> 15%.
-        XCTAssertTrue(app.staticTexts["54%"].waitForExistence(timeout: 5),
-                      "Profit rises to 54% once the deposit lands in the business ledger")
+        // Profit 1,900 -> 5,700 of 10,000 = 57%; Ops 3,180 -> 32%; Growth 1,120 -> 11%.
+        XCTAssertTrue(app.staticTexts["57%"].waitForExistence(timeout: 5),
+                      "Profit rises to 57% once the deposit lands in the business ledger")
         XCTAssertTrue(app.staticTexts["32%"].exists, "Ops share falls to 32%")
     }
 
