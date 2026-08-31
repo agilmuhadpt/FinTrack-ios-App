@@ -11,7 +11,9 @@ enum Tab: Hashable {
 /// exactly as the prototype's `view: { t, i }` is.
 enum DetailRoute: Hashable {
     case loan(Int)
-    case milestone(Int)
+    /// `business` selects which list the index belongs to — `msBusiness` or `msPersonal`.
+    /// The two are separate arrays, so an index alone is ambiguous.
+    case milestone(Int, business: Bool = false)
     case account(Int)
 }
 
@@ -47,6 +49,13 @@ final class UIState {
 
     /// `showBanner && !wiz && !sheet` — the prototype hides the banner behind either overlay.
     var bannerVisible: Bool { showBanner && !showWizard && !showEntry }
+
+    /// True while anything is presented over the tab content. Used to take the content
+    /// and tab bar out of the accessibility tree: without it VoiceOver can swipe into —
+    /// and activate — controls behind a modal sheet.
+    var overlayPresented: Bool {
+        detail != nil || showSettings || showEntry || showResetAlert || showWizard
+    }
 
     // MARK: - Transitions (ported from the prototype's inline setState calls)
 

@@ -13,6 +13,9 @@ import SwiftUI
 struct MilestoneDetailView: View {
 
     let index: Int
+    /// Which list `index` refers to. Business milestones fund from the same accounts but
+    /// count toward Profit rather than Savings.
+    var business = false
 
     @Environment(AppStore.self) private var store
     @Environment(UIState.self) private var ui
@@ -29,7 +32,8 @@ struct MilestoneDetailView: View {
     /// Index-safe lookup. `DetailHostView` already range-checks, but the overlay can outlive
     /// a mutation by one render pass, and the prototype's `if (m)` guard is equally tolerant.
     private var milestone: Milestone? {
-        store.data.msPersonal.indices.contains(index) ? store.data.msPersonal[index] : nil
+        let list = business ? store.data.msBusiness : store.data.msPersonal
+        return list.indices.contains(index) ? list[index] : nil
     }
 
     var body: some View {
@@ -95,7 +99,8 @@ struct MilestoneDetailView: View {
 
                 addMoneyRow()
 
-                Text("Deposits come from your first account and count toward Savings.")
+                Text("Deposits come from your first account and count toward "
+                     + (business ? "Profit." : "Savings."))
                     .font(.system(size: 13))
                     .foregroundStyle(theme.sub)
                     .fixedSize(horizontal: false, vertical: true)
@@ -117,14 +122,14 @@ struct MilestoneDetailView: View {
         let idx = index
         let binding = Binding<Date>(
             get: { m.targetDate ?? Self.defaultTargetDate() },
-            set: { store.setMilestoneDate(index: idx, date: $0) }
+            set: { store.setMilestoneDate(index: idx, date: $0, business: business) }
         )
 
         return FTCard {
             VStack(alignment: .leading, spacing: 0) {
                 if m.targetDate == nil {
                     Button {
-                        store.setMilestoneDate(index: idx, date: Self.defaultTargetDate())
+                        store.setMilestoneDate(index: idx, date: Self.defaultTargetDate(), business: business)
                     } label: {
                         Text("Set a target date")
                             .font(.system(size: 15, weight: .semibold))
@@ -156,7 +161,7 @@ struct MilestoneDetailView: View {
                         .padding(.top, 8)
 
                     Button {
-                        store.setMilestoneDate(index: idx, date: nil)
+                        store.setMilestoneDate(index: idx, date: nil, business: business)
                     } label: {
                         Text("Remove date")
                             .font(.system(size: 15, weight: .semibold))
@@ -276,7 +281,7 @@ struct MilestoneDetailView: View {
     /// and the field is only cleared once the deposit has been booked.
     private func submitAmount() {
         guard let amount = MsDetailParse.amount(amountText), amount > 0 else { return }
-        store.addToMilestone(index: index, amount: amount)
+        store.addToMilestone(index: index, amount: amount, business: business)
         amountText = ""
         amountFocused = false
     }

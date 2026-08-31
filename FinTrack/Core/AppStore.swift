@@ -321,12 +321,19 @@ final class AppStore {
                              acct: acctName)
 
         case .milestone:
-            guard !data.msPersonal.isEmpty else { return false }
-            var ms = data.msPersonal
+            var ms = draft.isBusiness ? data.msBusiness : data.msPersonal
+            guard !ms.isEmpty else { return false }
             let mi = max(0, min(draft.ms, ms.count - 1))
             ms[mi].saved += amount
-            next.msPersonal = ms
-            next.bucketSpend.savings += amount
+            if draft.isBusiness {
+                next.msBusiness = ms
+                // Profit is the business mirror of Savings: money set aside rather
+                // than consumed.
+                next.businessBucketSpend.profit += amount
+            } else {
+                next.msPersonal = ms
+                next.bucketSpend.savings += amount
+            }
             if !accounts.isEmpty { accounts[acctIdx].bal -= amount }
             let title = desc.isEmpty ? ms[mi].name + " deposit" : desc
             tx = Transaction(glyph: AppStore.glyph(from: ms[mi].name),
@@ -360,18 +367,29 @@ final class AppStore {
     /// account is debited, the amount counts as Savings spend and a transaction is logged.
     /// Sets or clears a milestone's optional target date. `nil` returns the goal to
     /// open-ended, which is the default and a legitimate end state, not an error.
-    func setMilestoneDate(index: Int, date: Date?) {
-        guard data.msPersonal.indices.contains(index) else { return }
-        mutate { $0.msPersonal[index].targetDate = date }
+    func setMilestoneDate(index: Int, date: Date?, business: Bool = false) {
+        let list = business ? data.msBusiness : data.msPersonal
+        guard list.indices.contains(index) else { return }
+        mutate {
+            if business { $0.msBusiness[index].targetDate = date }
+            else { $0.msPersonal[index].targetDate = date }
+        }
     }
 
-    func addToMilestone(index: Int, amount: Double) {
-        guard amount.isFinite, amount > 0, data.msPersonal.indices.contains(index) else { return }
-        let name = data.msPersonal[index].name
+    func addToMilestone(index: Int, amount: Double, business: Bool = false) {
+        let list = business ? data.msBusiness : data.msPersonal
+        guard amount.isFinite, amount > 0, list.indices.contains(index) else { return }
+        let name = list[index].name
         mutate { d in
-            d.msPersonal[index].saved += amount
+            if business {
+                d.msBusiness[index].saved += amount
+                // Profit mirrors Savings on the business side.
+                d.businessBucketSpend.profit += amount
+            } else {
+                d.msPersonal[index].saved += amount
+                d.bucketSpend.savings += amount
+            }
             if !d.accounts.isEmpty { d.accounts[0].bal -= amount }
-            d.bucketSpend.savings += amount
             let tx = Transaction(glyph: AppStore.glyph(from: name),
                                  tintHex: "#FFF3E0",
                                  colorHex: "#C87B1B",

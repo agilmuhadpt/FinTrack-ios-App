@@ -22,6 +22,9 @@ struct RootView: View {
 
             tabBody
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                // Behind a modal, this content must leave the accessibility tree —
+                // otherwise VoiceOver walks straight into the screen underneath.
+                .accessibilityHidden(ui.overlayPresented)
 
             // The tab bar hides behind the wizard, which is full-screen.
             if !ui.showWizard {
@@ -30,6 +33,7 @@ struct RootView: View {
                     TabBarView()
                 }
                 .ignoresSafeArea(edges: .bottom)
+                .accessibilityHidden(ui.overlayPresented)
             }
 
             overlays
@@ -132,8 +136,11 @@ struct DetailHostView: View {
         switch route {
         case .loan(let i):
             if store.data.loans.indices.contains(i) { LoanDetailView(index: i) } else { dismissed }
-        case .milestone(let i):
-            if store.data.msPersonal.indices.contains(i) { MilestoneDetailView(index: i) } else { dismissed }
+        case .milestone(let i, let business):
+            let list = business ? store.data.msBusiness : store.data.msPersonal
+            if list.indices.contains(i) {
+                MilestoneDetailView(index: i, business: business)
+            } else { dismissed }
         case .account(let i):
             if store.data.accounts.indices.contains(i) { AccountDetailView(index: i) } else { dismissed }
         }

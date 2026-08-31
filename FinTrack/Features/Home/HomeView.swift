@@ -230,7 +230,7 @@ struct HomeView: View {
                 emptyMilestones
             } else {
                 ForEach(Array(list.enumerated()), id: \.element.id) { index, milestone in
-                    milestoneCard(milestone, index: index, tappable: personal)
+                    milestoneCard(milestone, index: index, business: !personal)
                         // animation-delay: (i * 50) + 'ms'
                         .ftEntrance(delay: Double(index) * 0.05, reduceMotion: reduceMotion)
                 }
@@ -239,18 +239,16 @@ struct HomeView: View {
     }
 
     @ViewBuilder
-    private func milestoneCard(_ milestone: Milestone, index: Int, tappable: Bool) -> some View {
-        if tappable {
-            Button {
-                ui.openDetail(.milestone(index))
-            } label: {
-                milestoneCardBody(milestone)
-            }
-            .buttonStyle(FTPressableStyle(scale: 0.985))
-        } else {
-            // Business milestones carry `open: () => {}` — no tap target at all.
+    /// Every milestone is tappable now. The prototype gave business ones
+    /// `open: () => {}` because they could not be funded; now that they can, leaving them
+    /// inert would strand the only screen that funds them.
+    private func milestoneCard(_ milestone: Milestone, index: Int, business: Bool) -> some View {
+        Button {
+            ui.openDetail(.milestone(index, business: business))
+        } label: {
             milestoneCardBody(milestone)
         }
+        .buttonStyle(FTPressableStyle(scale: 0.985))
     }
 
     /// The one derived number a target date earns: what finishing on time costs per

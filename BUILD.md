@@ -181,9 +181,12 @@ asserting every share moves (32/48/20), including the two buckets left untouched
 possible if the denominator is real. Two further tests assert the ledgers stay separate in
 both directions.
 
-Known gap: **business milestones cannot receive deposits.** `saveEntry`'s milestone branch
-indexes `msPersonal` unconditionally, so the entry sheet's milestone picker never lists
-`msBusiness`. Pre-existing prototype behaviour, not introduced here.
+Business milestones can be funded, from the entry sheet (choose Studio under Ledger)
+or by tapping the card on Home. A business deposit counts toward **Profit** — the business
+mirror of Savings — so funding a goal also moves the Studio bar.
+
+`DetailRoute.milestone` carries a `business` flag because `msPersonal` and `msBusiness` are
+separate arrays and an index alone is ambiguous.
 
 ## Known deviations from the prototype
 
@@ -201,6 +204,11 @@ indexes `msPersonal` unconditionally, so the entry sheet's milestone picker neve
   milestones are unchanged.
 - **The New Entry sheet gains a Ledger row for expenses**, so business spending can be
   recorded and the Studio bar can be real rather than a fixed 48/22/30.
+- **Business milestone cards are tappable.** The prototype gave them `open: () => {}`
+  because they could not be funded; leaving them inert would strand the screen that funds
+  them.
+- While any overlay is presented, the tab content and tab bar are `.accessibilityHidden`.
+  Without it VoiceOver walks into the screen behind a modal sheet and can activate it.
 - Filled segmented controls are real `Button`s with an `.isSelected` trait. As `Text` with
   a tap gesture they had no button semantics: VoiceOver could not tell they were tappable
   or which was active, and Switch Control could not activate them. Rendering is unchanged

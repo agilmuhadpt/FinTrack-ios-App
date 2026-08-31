@@ -114,6 +114,7 @@ enum DebugLaunch {
         case "banner":    ui.showBanner = true
         case "loan":      ui.detail = .loan(index)
         case "milestone": ui.detail = .milestone(index)
+        case "bizmilestone": ui.detail = .milestone(index, business: true)
         case "account":   ui.detail = .account(index)
         default: break
         }

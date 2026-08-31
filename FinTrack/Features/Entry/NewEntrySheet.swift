@@ -281,7 +281,10 @@ struct NewEntrySheet: View {
                 amountField
                 descriptionField
 
-                if draft.kind == .expense { bucketSection }
+                // The ledger choice applies to expenses and milestone deposits. Income
+                // and loan payments behave identically in both modes.
+                if draft.kind == .expense || draft.kind == .milestone { ledgerSection }
+                if draft.kind == .expense { bucketRow }
                 if draft.kind == .loan { loanSection }
                 if draft.kind == .milestone { milestoneSection }
 
@@ -363,29 +366,27 @@ struct NewEntrySheet: View {
 
     // MARK: d. Bucket (expense only)
 
-    private var bucketSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // Which ledger this expense belongs to. Only expenses are scoped — income,
-            // loan payments and milestone deposits are the same in both modes, so this
-            // row appears nowhere else.
-            VStack(alignment: .leading, spacing: 0) {
-                caption("Ledger")
-                FTSegmentedControl(labels: ["Personal", "Studio"],
-                                   selection: ledgerBinding,
-                                   style: .filled)
-            }
+    /// Which ledger the entry belongs to. Shown for expenses and milestone deposits.
+    private var ledgerSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            caption("Ledger")
+            FTSegmentedControl(labels: ["Personal", "Studio"],
+                               selection: ledgerBinding,
+                               style: .filled)
+        }
+    }
 
-            VStack(alignment: .leading, spacing: 0) {
-                caption("Bucket")
-                if draft.isBusiness {
-                    FTSegmentedControl(labels: BusinessBucket.allCases.map(\.rawValue),
-                                       selection: businessBucketBinding,
-                                       style: .filled)
-                } else {
-                    FTSegmentedControl(labels: Bucket.allCases.map(\.rawValue),
-                                       selection: bucketBinding,
-                                       style: .filled)
-                }
+    private var bucketRow: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            caption("Bucket")
+            if draft.isBusiness {
+                FTSegmentedControl(labels: BusinessBucket.allCases.map(\.rawValue),
+                                   selection: businessBucketBinding,
+                                   style: .filled)
+            } else {
+                FTSegmentedControl(labels: Bucket.allCases.map(\.rawValue),
+                                   selection: bucketBinding,
+                                   style: .filled)
             }
         }
     }
@@ -440,7 +441,7 @@ struct NewEntrySheet: View {
         VStack(alignment: .leading, spacing: 0) {
             caption("Which milestone")
             VStack(spacing: 6) {
-                ForEach(Array(store.data.msPersonal.enumerated()), id: \.element.id) { index, ms in
+                ForEach(Array(milestoneList.enumerated()), id: \.element.id) { index, ms in
                     pickerRow(selected: draft.ms == index,
                               action: { draft.ms = index }) {
                         Text(store.fmtN(ms.saved) + " / " + store.fmtN(ms.target))
@@ -454,7 +455,23 @@ struct NewEntrySheet: View {
             }
             .animation(FTMotion.resolved(Self.borderFade, reduceMotion: reduceMotion),
                        value: draft.ms)
+
+            if milestoneList.isEmpty {
+                Text(draft.isBusiness
+                     ? "No Studio milestones yet."
+                     : "No milestones yet.")
+                    .font(.system(size: 13))
+                    .foregroundStyle(theme.sub)
+                    .padding(.top, 2)
+            }
         }
+        // Switching ledger swaps the list, so a held index could point at a different
+        // goal — or past the end of a shorter list.
+        .onChange(of: draft.isBusiness) { _, _ in draft.ms = 0 }
+    }
+
+    private var milestoneList: [Milestone] {
+        draft.isBusiness ? store.data.msBusiness : store.data.msPersonal
     }
 
     /// Shared loan / milestone row. The 2pt border is always drawn — only its colour
